@@ -20,6 +20,8 @@ const _AGT0CCRA_EVENT: u16 = 0x041; // AGT0 Compare Match A event, TODO: use for
 
 static TIMER: cortex_m::interrupt::Mutex<RefCell<Option<T>>> = cortex_m::interrupt::Mutex::new(RefCell::new(None));
 
+static TIMER_CLOCK_FREQ: AtomicU32 = AtomicU32::new(3_000_000); // 3MHz, each tick is 1/3 of a millisecond
+
 #[cfg(feature = "agt0")]
 #[interrupt]
 fn IEL95() {
@@ -94,8 +96,8 @@ impl Driver for RenesasDriver {
             let count = ra4m2_pac::AGT0.agt().read().get();
             let total_ticks = period as u64 * OVERFLOW_COUNT as u64 + count as u64; 
             const US_PER_SEC: u64 = 1_000_000;
-            const TICKS_PER_SEC: u64 = 24_000_000;
-            total_ticks * US_PER_SEC / TICKS_PER_SEC
+            let ticks_per_second: u64 = TIMER_CLOCK_FREQ.load(Ordering::Relaxed) as u64;
+            total_ticks * US_PER_SEC / ticks_per_second
         }
     }
 
@@ -113,6 +115,7 @@ impl Driver for RenesasDriver {
     }
 }
 
-pub fn init(timer: T) {
+pub fn init(timer: T, clock_freq: u32) {
     DRIVER.init(timer);
+    TIMER_CLOCK_FREQ.store(clock_freq, Ordering::Relaxed);
 }
