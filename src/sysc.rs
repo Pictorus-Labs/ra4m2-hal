@@ -1,7 +1,7 @@
 use defmt::Format;
 /// This module is for the clock generation circuit (CGC) on the RA4M2 MCU.
 
-use ra4m2_pac::{sysc::{sckdivcr::{Ick, Pckb, Pckd}, sckscr::Cksel}, RegisterValue};
+use ra4m2_pac::{sysc::{sckdivcr::{Ick, Pckb, Pckd, Rsv}, sckscr::Cksel}, RegisterValue};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Format)]
 #[repr(u8)]
@@ -91,6 +91,19 @@ impl Into<Pckb> for ClockDividers {
     }
 }
 
+impl Into<Rsv> for ClockDividers {
+    fn into(self) -> Rsv {
+        match self {
+            ClockDividers::Div1 => Rsv::_000,
+            ClockDividers::Div2 => Rsv::_001,
+            ClockDividers::Div4 => Rsv::_010,
+            ClockDividers::Div8 => Rsv::_011,
+            ClockDividers::Div16 => Rsv::_100,
+            ClockDividers::Div32 => Rsv::_101,
+        }
+    }
+}
+
 impl Into<Pckd> for ClockDividers {
     fn into(self) -> Pckd {
         match self {
@@ -107,23 +120,46 @@ impl Into<Pckd> for ClockDividers {
 
 
 /// Configuration for the system clock dividers
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SystemClockDividerConfig {
-    _pckb: ClockDividers,
-    _pcka: ClockDividers,
-    _rsv: ClockDividers, // note, set these to the same value as pkcb
-    ick: ClockDividers,
-    _fck: ClockDividers,
+    pub pckb: ClockDividers,
+    pub pckd: ClockDividers,
+    pub pcka: ClockDividers,
+    pub rsv: ClockDividers,
+    pub ick: ClockDividers,
+    pub _fck: ClockDividers,
+}
+
+impl Default for SystemClockDividerConfig {
+    fn default() -> Self {
+        SystemClockDividerConfig {
+            pckb: ClockDividers::Div4,
+            pckd: ClockDividers::Div4,
+            pcka: ClockDividers::Div4,
+            rsv: ClockDividers::Div4,
+            ick: ClockDividers::Div4,
+            _fck: ClockDividers::Div4,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SystemClockConfig {
+    pub system_clock_divider: SystemClockDividerConfig,
+    pub external_oscillator: u32,
+    pub clock_source: ClockSource,
 }
 
 /// Represents the system clock for the RA4M2 MCU. The MAIN_CLOCK_FREQ is the frequency
 /// of the external oscillator, i.e. 24MHz for the RA4M2 development kit.
-pub struct SystemClock<const MAIN_CLOCK_FREQ: u32> {
+pub struct SystemClock {
     sysc: ra4m2_pac::Sysc,
+    config: SystemClockConfig,
 }
 
-impl<const MAIN_CLOCK_FREQ: u32> SystemClock<MAIN_CLOCK_FREQ> {
-    pub fn new(sysc: ra4m2_pac::Sysc) -> Self {
-        SystemClock { sysc }
+impl SystemClock {
+    pub fn new(sysc: ra4m2_pac::Sysc, config: SystemClockConfig) -> Self {
+        SystemClock { sysc, config }
     }
 
     pub fn get_system_clock_src(&self) -> ClockSource {
@@ -145,9 +181,10 @@ impl<const MAIN_CLOCK_FREQ: u32> SystemClock<MAIN_CLOCK_FREQ> {
     pub fn get_clk_freq_divider(&self) -> SystemClockDividerConfig {
         unsafe {
             SystemClockDividerConfig {
-                _pckb: self.sysc.sckdivcr().read().pckb().get().0.into(),
-                _pcka: self.sysc.sckdivcr().read().pcka().get().0.into(),
-                _rsv: self.sysc.sckdivcr().read().rsv().get().0.into(), // note, set these to the same value as pkcb
+                pckd: self.sysc.sckdivcr().read().pckd().get().0.into(),
+                pckb: self.sysc.sckdivcr().read().pckb().get().0.into(),
+                pcka: self.sysc.sckdivcr().read().pcka().get().0.into(),
+                rsv: self.sysc.sckdivcr().read().rsv().get().0.into(), // note, set these to the same value as pkcb
                 ick: self.sysc.sckdivcr().read().ick().get().0.into(),
                 _fck: self.sysc.sckdivcr().read().fck().get().0.into(),
             }
@@ -160,7 +197,7 @@ impl<const MAIN_CLOCK_FREQ: u32> SystemClock<MAIN_CLOCK_FREQ> {
             ClockSource::HOCO => todo!(), 
             ClockSource::MOCO => 8_000_000,   
             ClockSource::LOCO => todo!(),       
-            ClockSource::MainClockOsc => MAIN_CLOCK_FREQ, // Oscillator on the RA4M2 dev kit is 24MHz 
+            ClockSource::MainClockOsc => self.config.external_oscillator,
             ClockSource::SubClockOsc => todo!(), 
             ClockSource::PLL => todo!(),    
         };
@@ -196,6 +233,7 @@ impl<const MAIN_CLOCK_FREQ: u32> SystemClock<MAIN_CLOCK_FREQ> {
     pub fn set_system_clk_divder(&mut self, divider: ClockDividers) -> &mut Self {
         // Set the clock divider for the system clock, see PRCR register for write access
         // details.
+        self.config.system_clock_divider.ick = divider; // Update the config
         cortex_m::interrupt::free(|_| {
             unsafe {
                 self._enable_clock_write();
@@ -210,6 +248,7 @@ impl<const MAIN_CLOCK_FREQ: u32> SystemClock<MAIN_CLOCK_FREQ> {
 
     pub fn set_system_clk_src(&mut self, src: ClockSource) -> &mut Self {
         // Set the clock source for the system clock
+        self.config.clock_source = src; // Update the config
         cortex_m::interrupt::free(|_| {
             unsafe {
                 self._enable_clock_write();
@@ -224,11 +263,12 @@ impl<const MAIN_CLOCK_FREQ: u32> SystemClock<MAIN_CLOCK_FREQ> {
 
     pub fn set_pclkb_divider(&mut self, divider: ClockDividers) -> &mut Self {
         // Set the PCLKB clock divider
+        self.config.system_clock_divider.pckb = divider; // Update the config
         cortex_m::interrupt::free(|_| {
             unsafe {
                 self._enable_clock_write();
                 self.sysc.sckdivcr().modify(|w| {
-                    w.pckb().set(divider.into())
+                    w.pckb().set(divider.into()).rsv().set(divider.into())
                 });
                 self._disable_clock_write();
             }
@@ -238,6 +278,7 @@ impl<const MAIN_CLOCK_FREQ: u32> SystemClock<MAIN_CLOCK_FREQ> {
 
     pub fn set_pclkd_divider(&mut self, divider: ClockDividers) -> &mut Self {
         // Set the PCLKA clock divider
+        self.config.system_clock_divider.pckd = divider; // Update the config
         cortex_m::interrupt::free(|_| {
             unsafe {
                 self._enable_clock_write();

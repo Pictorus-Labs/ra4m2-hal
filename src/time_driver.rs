@@ -1,5 +1,4 @@
 use embassy_time_driver::Driver;
-use embedded_time::{Clock, Instant};
 use ra4m2_pac::{agt0::agtcr::Tstart, NoBitfieldReg};
 use core::{cell::RefCell, sync::atomic::{AtomicU32, Ordering}};
 use ra4m2_pac::{interrupt};
@@ -29,20 +28,6 @@ fn IEL95() {
     let current = DRIVER.period.load(Ordering::Relaxed);
     DRIVER.period.store(current + 1, Ordering::Relaxed);
 }
-
-/// RenesasClock is the the `Clock` implementation for embedded_time
-pub struct RenesasClock<const TIMER_FREQUENCY: usize> {}
-
-impl<const TIMER_FREQUENCY: usize> Clock for RenesasClock<TIMER_FREQUENCY> {
-    type T = u64;
-
-    const SCALING_FACTOR: embedded_time::rate::Fraction = embedded_time::rate::Fraction::new(1, TIMER_FREQUENCY as u32);
-    
-    fn try_now(&self) -> Result<embedded_time::Instant<Self>, embedded_time::clock::Error> {
-        Ok(Instant::new(DRIVER.now()))
-    }
-}
-
 /// Keeps track of the underflow events for the AGT0 timer. Implements the
 /// `embassy_time_driver::Driver` trait to provide timekeeping functionality.
 /// TODO: Add queue for alarms in the future. See
@@ -64,9 +49,6 @@ impl RenesasDriver {
         register_interrupt(interrupt::IEL95, UNDERFLOW_EVENT);
 
         unsafe {
-            // Set the CCRA register to 30000 counts, AGT0 counts down
-            //timer.agtcma().modify(|w| w.set(65535 - 30000)); 
-            //timer.agtcmsr().modify(|w| w.tcmea().set(Tcmea::_1));
             timer.agtcr().modify(|w| w.tstart().set(Tstart::_1));
         }
 
@@ -95,7 +77,7 @@ impl Driver for RenesasDriver {
         unsafe {
             let count = ra4m2_pac::AGT0.agt().read().get();
             let total_ticks = period as u64 * OVERFLOW_COUNT as u64 + count as u64; 
-            const US_PER_SEC: u64 = 1_000_000;
+            const US_PER_SEC: u64 = embassy_time::TICK_HZ as u64;
             let ticks_per_second: u64 = TIMER_CLOCK_FREQ.load(Ordering::Relaxed) as u64;
             total_ticks * US_PER_SEC / ticks_per_second
         }

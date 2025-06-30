@@ -12,7 +12,7 @@ use defmt_rtt as _;
 fn main() -> ! {
     let peripheral = ra4m2_pac::Peripherals::take().unwrap();
 
-    let mut system_clk = SystemClock::<24_000_000>::new(peripheral.SYSC);
+    
     let clock_src = system_clk.get_system_clock_src();
     let clock_freq = system_clk.get_system_clk_freq();
 
@@ -35,6 +35,8 @@ fn main() -> ! {
 
     let clock_src = system_clk.get_system_clock_src();
     info!("Updated System Clock Source: {:?}", clock_src);
+
+    let clock = RenesasClock::<3_000_000>::new();
 
     let new_clock_freq = system_clk.get_system_clk_freq();
     info!("New System Clock Frequency: {} Hz", new_clock_freq);
