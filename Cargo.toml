@@ -2,6 +2,7 @@
 name = "ra4m2-hal"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [dependencies]
 ra4m2-pac = { git = "https://github.com/amcelroy/ra-pac", features = ["all", "rt"] }
