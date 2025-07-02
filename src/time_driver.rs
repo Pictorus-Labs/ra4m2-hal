@@ -77,9 +77,10 @@ impl Driver for RenesasDriver {
     fn now(&self) -> u64 {
         cortex_m::interrupt::free(|_cs| {
             let period = DRIVER.period.load(Ordering::Relaxed);
-            let div = TIMER_CLOCK_FREQ.load(Ordering::Relaxed) / TICK_HZ as u32;
+            let timer_ticks_per_second = TIMER_CLOCK_FREQ.load(Ordering::Relaxed);
             compiler_fence(Ordering::Acquire);
             unsafe {
+                let div = timer_ticks_per_second / TICK_HZ as u32;
                 // Compute the number of timer ticks in an embassy time tick rate.
                 let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
                 let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64 + count as u64; 
