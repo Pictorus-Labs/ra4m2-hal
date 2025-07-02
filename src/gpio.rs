@@ -107,7 +107,7 @@ pub mod port4 {
     use core::{cell::RefCell, marker::PhantomData};
     use ra4m2_pac::Port1;
 
-    use crate::{gpio::{AlternateFunction, AnalogInput, DrainControl, DriveMode, HighZ, Input, InterruptEnable, InterruptEvent, Output, PinState, PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull}, i2c::{I2c0SCLPin, I2c0SDAPin}};
+    use crate::{gpio::{AlternateFunction, AnalogInput, DrainControl, DriveMode, HighZ, Input, InterruptEnable, InterruptEvent, Output, PinState, PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull}, i2c::{I2cSCLPin, I2cSDAPin}};
 
     // Note Port4 is a struct of r4m2_pac::Port1
     static PORT4: cortex_m::interrupt::Mutex<RefCell<Option<Port1>>> = cortex_m::interrupt::Mutex::new(RefCell::new(None));
@@ -248,8 +248,8 @@ pub mod port4 {
         }
     }
 
-    allocate_pin!(P00, 0, I2c0SDAPin);
-    allocate_pin!(P01, 1, I2c0SCLPin);
+    allocate_pin!(P00, 0, I2cSDAPin);
+    allocate_pin!(P01, 1, I2cSCLPin);
     allocate_pin!(P02, 2);
     allocate_pin!(P03, 3);
     allocate_pin!(P04, 4);

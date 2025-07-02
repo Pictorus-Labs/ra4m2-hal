@@ -31,20 +31,20 @@ fn get_slave_address(address: u8, direction: Direction) -> u8 {
 }
 
 /// Trait for I2C SDA pin
-pub trait I2c0SDAPin {}
+pub trait I2cSDAPin {}
 /// Trait for I2C SCL pin
-pub trait I2c0SCLPin {}
+pub trait I2cSCLPin {}
 
 macro_rules! define_i2c {
     ($name:ident, $IIC:ident, $power_func:ident) => {
         /// I2C (Inter-Integrated Circuit) driver for RA4M2 microcontroller
-        pub struct $name<SDA: I2c0SDAPin, SCL: I2c0SCLPin> {
+        pub struct $name<SDA: I2cSDAPin, SCL: I2cSCLPin> {
             iic: $IIC,
             _sda: SDA,
             _scl: SCL,
         }
 
-        impl<SDA: I2c0SDAPin, SCL: I2c0SCLPin> $name<SDA, SCL> {
+        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> $name<SDA, SCL> {
             /// Creates a new I2C instance with the given IIC0 peripheral.
             pub fn new(iic: $IIC, sda: SDA, scl: SCL) -> Self {
                 cortex_m::interrupt::free(|cs| {
@@ -342,7 +342,7 @@ macro_rules! define_i2c {
             }
         }
 
-        impl<SDA: I2c0SDAPin, SCL: I2c0SCLPin> embedded_hal::blocking::i2c::Write<SevenBitAddress> for I2c0<SDA, SCL> {
+        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> embedded_hal::blocking::i2c::Write<SevenBitAddress> for I2c0<SDA, SCL> {
 
             type Error = I2cError;
 
@@ -351,7 +351,7 @@ macro_rules! define_i2c {
             }
         }
 
-        impl<SDA: I2c0SDAPin, SCL: I2c0SCLPin> embedded_hal::blocking::i2c::Read<SevenBitAddress> for I2c0<SDA, SCL> {
+        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> embedded_hal::blocking::i2c::Read<SevenBitAddress> for I2c0<SDA, SCL> {
             type Error = I2cError;
 
             fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
@@ -359,7 +359,7 @@ macro_rules! define_i2c {
             }
         }
 
-        impl<SDA: I2c0SDAPin, SCL: I2c0SCLPin> embedded_hal::blocking::i2c::WriteRead<SevenBitAddress> for I2c0<SDA, SCL> {
+        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> embedded_hal::blocking::i2c::WriteRead<SevenBitAddress> for I2c0<SDA, SCL> {
             type Error = I2cError;
 
             fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
