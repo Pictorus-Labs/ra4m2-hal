@@ -59,6 +59,8 @@ pub enum PortMode {
     Alternate = 1,
 }
 
+pub trait AnyPin {}
+
 pub trait PinState: sealed::Sealed {}
 pub trait InputState: sealed::Sealed {}
 pub trait OutputState: sealed::Sealed {}
@@ -107,7 +109,7 @@ pub mod port4 {
     use core::{cell::RefCell, marker::PhantomData};
     use ra4m2_pac::Port1;
 
-    use crate::{gpio::{AlternateFunction, AnalogInput, DrainControl, DriveMode, HighZ, Input, InterruptEnable, InterruptEvent, Output, PinState, PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull}, i2c::{I2cSCLPin, I2cSDAPin}};
+    use crate::{gpio::{AlternateFunction, AnalogInput, AnyPin, DrainControl, DriveMode, HighZ, Input, InterruptEnable, InterruptEvent, Output, PinState, PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull}, i2c::{I2cSCLPin, I2cSDAPin}};
 
     // Note Port4 is a struct of r4m2_pac::Port1
     static PORT4: cortex_m::interrupt::Mutex<RefCell<Option<Port1>>> = cortex_m::interrupt::Mutex::new(RefCell::new(None));
@@ -138,7 +140,9 @@ pub mod port4 {
                 _p: PhantomData<S>,
             }
 
-            impl<S: PinState> $pin_name<S> {
+            impl AnyPin for $pin_name<Output<PushPull>> {}
+
+            impl<S: PinState + Sized> $pin_name<S> {
                 pub fn into_output_push_pull(self, drive_mode: DriveMode) -> $pin_name<Output<PushPull>> {
                     crate::pfsel::port4::set_pin_function(
                         $pin_number,
@@ -231,6 +235,18 @@ pub mod port4 {
             }
 
             impl embedded_hal::digital::v2::InputPin for $pin_name<Input<PullUp>> {
+                type Error = core::convert::Infallible;
+
+                fn is_high(&self) -> Result<bool, Self::Error> {
+                    Ok(crate::pfsel::port4::get_pin_value($pin_number))
+                }
+
+                fn is_low(&self) -> Result<bool, Self::Error> {
+                    Ok(!crate::pfsel::port4::get_pin_value($pin_number))
+                }
+            }
+
+            impl embedded_hal::digital::v2::InputPin for $pin_name<Input<PullDown>> {
                 type Error = core::convert::Infallible;
 
                 fn is_high(&self) -> Result<bool, Self::Error> {
