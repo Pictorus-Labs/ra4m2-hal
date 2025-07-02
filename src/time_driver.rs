@@ -33,6 +33,7 @@ fn IEL95() {
 /// TODO: Add queue for alarms in the future. See
 /// https://github.com/embassy-rs/embassy/blob/main/embassy-stm32/src/time_driver.rs
 /// for inspiration.
+#[repr(align(4))]
 pub struct RenesasDriver {
     period: AtomicU32,
 }

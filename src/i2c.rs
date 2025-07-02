@@ -38,6 +38,7 @@ pub trait I2cSCLPin {}
 macro_rules! define_i2c {
     ($name:ident, $IIC:ident, $power_func:ident) => {
         /// I2C (Inter-Integrated Circuit) driver for RA4M2 microcontroller
+        #[repr(align(4))]
         pub struct $name {
             iic: $IIC,
         }

@@ -152,6 +152,8 @@ pub struct SystemClockConfig {
 
 /// Represents the system clock for the RA4M2 MCU. The MAIN_CLOCK_FREQ is the frequency
 /// of the external oscillator, i.e. 24MHz for the RA4M2 development kit.
+
+#[repr(align(4))]
 pub struct SystemClock {
     sysc: ra4m2_pac::Sysc,
     config: SystemClockConfig,

@@ -136,6 +136,7 @@ pub mod port4 {
     /// to help constrain the pin type.
     // macro_rules! allocate_pin{
     //     (Pin:ident, self.n:literal $(, $trait:path)* $(,)?) => {
+    #[repr(align(4))]
     pub struct Pin<S: PinState> {
         _p: PhantomData<S>,
         n: u8,
