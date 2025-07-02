@@ -38,20 +38,18 @@ pub trait I2cSCLPin {}
 macro_rules! define_i2c {
     ($name:ident, $IIC:ident, $power_func:ident) => {
         /// I2C (Inter-Integrated Circuit) driver for RA4M2 microcontroller
-        pub struct $name<SDA: I2cSDAPin, SCL: I2cSCLPin> {
+        pub struct $name {
             iic: $IIC,
-            _sda: SDA,
-            _scl: SCL,
         }
 
-        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> $name<SDA, SCL> {
+        impl $name {
             /// Creates a new I2C instance with the given IIC0 peripheral.
-            pub fn new(iic: $IIC, sda: SDA, scl: SCL) -> Self {
+            pub fn new(iic: $IIC) -> Self {
                 cortex_m::interrupt::free(|cs| {
                     power::$power_func(cs); 
                 });
-                
-                $name { iic, _sda: sda, _scl: scl }
+
+                $name { iic }
             }
 
             /// Initializes the I2C settings for the given slave address.
@@ -342,7 +340,7 @@ macro_rules! define_i2c {
             }
         }
 
-        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> embedded_hal::blocking::i2c::Write<SevenBitAddress> for I2c0<SDA, SCL> {
+        impl embedded_hal::blocking::i2c::Write<SevenBitAddress> for I2c0 {
 
             type Error = I2cError;
 
@@ -351,7 +349,7 @@ macro_rules! define_i2c {
             }
         }
 
-        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> embedded_hal::blocking::i2c::Read<SevenBitAddress> for I2c0<SDA, SCL> {
+        impl embedded_hal::blocking::i2c::Read<SevenBitAddress> for I2c0 {
             type Error = I2cError;
 
             fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
@@ -359,7 +357,7 @@ macro_rules! define_i2c {
             }
         }
 
-        impl<SDA: I2cSDAPin, SCL: I2cSCLPin> embedded_hal::blocking::i2c::WriteRead<SevenBitAddress> for I2c0<SDA, SCL> {
+        impl embedded_hal::blocking::i2c::WriteRead<SevenBitAddress> for I2c0 {
             type Error = I2cError;
 
             fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {

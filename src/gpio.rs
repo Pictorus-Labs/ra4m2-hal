@@ -241,15 +241,11 @@ pub mod port4 {
                     Ok(!crate::pfsel::port4::get_pin_value($pin_number))
                 }
             }
-
-            $(
-                impl<S: PinState> $trait for $pin_name<S> {}
-            )*
         }
     }
 
-    allocate_pin!(P00, 0, I2cSDAPin);
-    allocate_pin!(P01, 1, I2cSCLPin);
+    allocate_pin!(P00, 0);
+    allocate_pin!(P01, 1);
     allocate_pin!(P02, 2);
     allocate_pin!(P03, 3);
     allocate_pin!(P04, 4);
