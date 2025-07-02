@@ -358,6 +358,15 @@ macro_rules! define_i2c {
                 self.read(address, buffer)
             }
         }
+
+        impl<SDA: I2c0SDAPin, SCL: I2c0SCLPin> embedded_hal::blocking::i2c::WriteRead<SevenBitAddress> for I2c0<SDA, SCL> {
+            type Error = I2cError;
+
+            fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+                self.write(address, write)?;
+                self.read(address, read)
+            }
+        }
     }
 }
 #[cfg(feature = "iic0")]
