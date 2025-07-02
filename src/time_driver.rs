@@ -1,7 +1,7 @@
 use embassy_time::TICK_HZ;
 use embassy_time_driver::Driver;
 use ra4m2_pac::{agt0::agtcr::Tstart, NoBitfieldReg};
-use core::{cell::RefCell, sync::atomic::{AtomicU32, Ordering}};
+use core::{cell::RefCell, sync::atomic::{compiler_fence, AtomicU32, Ordering}};
 use ra4m2_pac::{interrupt};
 use crate::{icu::{clear_interrupt, register_interrupt}, power};
 
@@ -75,14 +75,17 @@ impl Driver for RenesasDriver {
     /// https://github.com/embassy-rs/embassy/tree/68c823881262989b2ef462d6d4736cc886598b50
 
     fn now(&self) -> u64 {
-        let period = DRIVER.period.load(Ordering::Relaxed);
-        unsafe {
-            // Compute the number of timer ticks in an embassy time tick rate.
+        cortex_m::interrupt::free(|_cs| {
+            let period = DRIVER.period.load(Ordering::Relaxed);
             let div = TIMER_CLOCK_FREQ.load(Ordering::Relaxed) / TICK_HZ as u32;
-            let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
-            let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64 + count as u64; 
-            total_ticks
-        }
+            compiler_fence(Ordering::Acquire);
+            unsafe {
+                // Compute the number of timer ticks in an embassy time tick rate.
+                let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
+                let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64 + count as u64; 
+                total_ticks
+            }
+        })
     }
 
     unsafe fn allocate_alarm(&self) -> Option<embassy_time_driver::AlarmHandle> {
