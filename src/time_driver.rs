@@ -1,3 +1,4 @@
+use embassy_time::TICK_HZ;
 use embassy_time_driver::Driver;
 use ra4m2_pac::{agt0::agtcr::Tstart, NoBitfieldReg};
 use core::{cell::RefCell, sync::atomic::{AtomicU32, Ordering}};
@@ -76,11 +77,11 @@ impl Driver for RenesasDriver {
     fn now(&self) -> u64 {
         let period = DRIVER.period.load(Ordering::Relaxed);
         unsafe {
-            let count = ra4m2_pac::AGT0.agt().read().get();
-            let total_ticks = period as u64 * OVERFLOW_COUNT as u64 + count as u64; 
-            const US_PER_SEC: u64 = embassy_time::TICK_HZ as u64;
-            let ticks_per_second: u64 = TIMER_CLOCK_FREQ.load(Ordering::Relaxed) as u64;
-            total_ticks * US_PER_SEC / ticks_per_second
+            // Compute the number of timer ticks in an embassy time tick rate.
+            let div = TIMER_CLOCK_FREQ.load(Ordering::Relaxed) / TICK_HZ as u32;
+            let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
+            let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64 + count as u64; 
+            total_ticks
         }
     }
 
