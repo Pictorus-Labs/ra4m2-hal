@@ -1,6 +1,6 @@
 use core::cell::RefCell;
 
-use ra4m2_pac::{mstp::{mstpcrb::Mstpb9, mstpcrd::Mstpd3}, Mstp};
+use ra4m2_pac::{mstp::{mstpcrb::{Mstpb8, Mstpb9}, mstpcrd::Mstpd3}, Mstp};
 
 static POWER: cortex_m::interrupt::Mutex<RefCell<Option<Mstp>>> = cortex_m::interrupt::Mutex::new(RefCell::new(None));
 
@@ -21,6 +21,15 @@ pub fn enable_i2c0(cs: &cortex_m::interrupt::CriticalSection) {
     unsafe {
         if let Some(mstp) = POWER.borrow(cs).borrow_mut().as_mut() {
             mstp.mstpcrb().modify(|w| w.mstpb9().set(Mstpb9::_0)); // Set the bit to 0 to enable
+        }
+    }
+}
+
+pub fn enable_i2c1(cs: &cortex_m::interrupt::CriticalSection) {
+    // Enable I2C1 module
+    unsafe {
+        if let Some(mstp) = POWER.borrow(cs).borrow_mut().as_mut() {
+            mstp.mstpcrb().modify(|w| w.mstpb8().set(Mstpb8::_0)); // Set the bit to 0 to enable
         }
     }
 }

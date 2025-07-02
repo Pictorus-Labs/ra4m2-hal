@@ -11,10 +11,14 @@ cortex-m-rt = { version = "0.7" }
 defmt = "1.0.1"
 embassy-time-driver = { git = "https://github.com/embassy-rs/embassy.git", rev = "68c8238", optional = true }
 embassy-time = { git = "https://github.com/embassy-rs/embassy.git", rev = "68c8238" }
+embedded-hal = { version = "0.2.7" }
 
 [features]
-default = ["embassy_time"]
+default = ["embassy_time", "iic0", "port4"]
 
 embassy_time = ["dep:embassy-time-driver", "agt0"]
 
 agt0 = []
+iic0 = []
+iic1 = []
+port4 = []

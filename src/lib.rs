@@ -3,14 +3,16 @@
 use crate::sysc::SystemClock;
 
 pub mod sysc;
-pub mod gpio4;
+pub mod gpio;
 pub mod i2c;
 pub mod power;
 pub mod time_driver;
 pub mod icu;
 pub mod pfsel;
-pub mod demo;
 
+mod sealed {
+    pub trait Sealed {}
+}
 
 pub fn init(config: sysc::SystemClockConfig) -> SystemClock {
     let peripheral = ra4m2_pac::Peripherals::take().unwrap();
@@ -25,6 +27,8 @@ pub fn init(config: sysc::SystemClockConfig) -> SystemClock {
     crate::power::Power::init(peripheral.MSTP); // Initialize power management
     crate::icu::Icu::init(peripheral.ICU); // Initialize ICU for interrupt handling
     crate::pfsel::PinFnSel::init(peripheral.PFS); // Initialize Pin Function Select
+
+    #[cfg(feature = "agt0")]
     crate::time_driver::init(peripheral.AGT0, 3_000_000); // Initialize the time driver with AGT0
 
     system_clk
