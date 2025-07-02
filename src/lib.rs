@@ -1,5 +1,7 @@
 #![no_std]
 
+use ra4m2_pac::Peripherals;
+
 use crate::sysc::SystemClock;
 
 pub mod sysc;
@@ -14,7 +16,7 @@ mod sealed {
     pub trait Sealed {}
 }
 
-pub fn init(config: sysc::SystemClockConfig) -> SystemClock {
+pub fn init(config: sysc::SystemClockConfig) -> Peripherals {
     let peripheral = ra4m2_pac::Peripherals::take().unwrap();
 
     let mut system_clk = SystemClock::new(peripheral.SYSC, config);
@@ -31,5 +33,5 @@ pub fn init(config: sysc::SystemClockConfig) -> SystemClock {
     #[cfg(feature = "agt0")]
     crate::time_driver::init(peripheral.AGT0, 3_000_000); // Initialize the time driver with AGT0
 
-    system_clk
+    peripheral
 }
