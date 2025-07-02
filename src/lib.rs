@@ -17,7 +17,7 @@ mod sealed {
 }
 
 pub fn init(config: sysc::SystemClockConfig) -> (Peripherals, SystemClock) {
-    let peripheral = ra4m2_pac::Peripherals::take().unwrap();
+    let peripheral = ra4m2_pac::Peripherals::take().expect("msg: Failed to take RA4M2 peripherals");
 
     let mut system_clk = SystemClock::new(peripheral.SYSC, config);
 
