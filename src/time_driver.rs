@@ -1,6 +1,6 @@
 use embassy_time::TICK_HZ;
 use embassy_time_driver::Driver;
-use ra4m2_pac::{agt0::agtcr::Tstart, NoBitfieldReg};
+use ra4m2_pac::{agt0::agtcr::Tstart};
 use core::{cell::RefCell, sync::atomic::{compiler_fence, AtomicU32, Ordering}};
 use ra4m2_pac::{interrupt};
 use crate::{icu::{clear_interrupt, register_interrupt}, power};
@@ -20,7 +20,9 @@ const _AGT0CCRA_EVENT: u16 = 0x041; // AGT0 Compare Match A event, TODO: use for
 
 static TIMER: cortex_m::interrupt::Mutex<RefCell<Option<T>>> = cortex_m::interrupt::Mutex::new(RefCell::new(None));
 
-static TIMER_CLOCK_FREQ: AtomicU32 = AtomicU32::new(3_000_000); // 3MHz, each tick is 1/3 of a millisecond
+// 3MHz, this is needed to reconcile the timer dividers, core clock, and make sure the embassy TICK_HZ is all
+// aligned. I can't make AGT0 run at exactly 1MHz. 
+static TIMER_CLOCK_FREQ: AtomicU32 = AtomicU32::new(3_000_000); 
 
 #[cfg(feature = "agt0")]
 #[interrupt]
@@ -79,13 +81,15 @@ impl Driver for RenesasDriver {
             let period = DRIVER.period.load(Ordering::Relaxed);
             let timer_ticks_per_second = TIMER_CLOCK_FREQ.load(Ordering::Relaxed);
             compiler_fence(Ordering::Acquire);
-            unsafe {
-                let div = timer_ticks_per_second / TICK_HZ as u32;
-                // Compute the number of timer ticks in an embassy time tick rate.
-                //let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
-                let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64; 
-                total_ticks
-            }
+            let div = timer_ticks_per_second / TICK_HZ as u32;
+            // Compute the number of timer ticks in an embassy time tick rate.
+            //let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
+            // TODO: Revisit this. I think the issue is that now() was being called from different spots and the 
+            // Atomic had not been update, but the tick count was. This might have been leading to non-sequential 
+            // u64 times that were causing u64 errors when subtracted. It is close-ish, but I need to study 
+            // the STM32, RP2040, and nRF a bit more to better understand the time-keeping.
+            let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64; 
+            total_ticks
         })
     }
 
