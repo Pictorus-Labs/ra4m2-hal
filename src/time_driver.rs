@@ -26,8 +26,8 @@ static TIMER_CLOCK_FREQ: AtomicU32 = AtomicU32::new(3_000_000); // 3MHz, each ti
 #[interrupt]
 fn IEL95() {
     clear_interrupt(interrupt::IEL95);
-    let current = DRIVER.period.load(Ordering::Relaxed);
-    DRIVER.period.store(current + 1, Ordering::Relaxed);
+    let current = DRIVER.period.load(Ordering::Relaxed) + 1;
+    DRIVER.period.store(current, Ordering::Relaxed);
 }
 /// Keeps track of the underflow events for the AGT0 timer. Implements the
 /// `embassy_time_driver::Driver` trait to provide timekeeping functionality.
@@ -82,8 +82,8 @@ impl Driver for RenesasDriver {
             unsafe {
                 let div = timer_ticks_per_second / TICK_HZ as u32;
                 // Compute the number of timer ticks in an embassy time tick rate.
-                let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
-                let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64 + count as u64; 
+                //let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
+                let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64; 
                 total_ticks
             }
         })
