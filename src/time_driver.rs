@@ -1,6 +1,6 @@
 use embassy_time::TICK_HZ;
 use embassy_time_driver::Driver;
-use ra4m2_pac::{agt0::agtcr::Tstart};
+use ra4m2_pac::{agt0::agtcr::Tstart, NoBitfieldReg};
 use core::{cell::RefCell, sync::atomic::{compiler_fence, AtomicU32, Ordering}};
 use ra4m2_pac::{interrupt};
 use crate::{icu::{clear_interrupt, register_interrupt}, power};
@@ -81,14 +81,17 @@ impl Driver for RenesasDriver {
             let period = DRIVER.period.load(Ordering::Relaxed);
             let timer_ticks_per_second = TIMER_CLOCK_FREQ.load(Ordering::Relaxed);
             compiler_fence(Ordering::Acquire);
-            let div = timer_ticks_per_second / TICK_HZ as u32;
             // Compute the number of timer ticks in an embassy time tick rate.
-            //let count = ra4m2_pac::AGT0.agt().read().get() / div as u16;
-            // TODO: Revisit this. I think the issue is that now() was being called from different spots and the 
-            // Atomic had not been update, but the tick count was. This might have been leading to non-sequential 
-            // u64 times that were causing u64 errors when subtracted. It is close-ish, but I need to study 
+            let count = unsafe {
+                // AGT are count down timers, so we need to subtract the current count from the overflow count
+                OVERFLOW_COUNT - ra4m2_pac::AGT0.agt().read().get() as u16
+            };
+            // TODO: Revisit this. I think the issue is that now() was being called from different spots and the
+            // Atomic had not been update, but the tick count was. This might have been leading to non-sequential
+            // u64 times that were causing u64 errors when subtracted. It is close-ish, but I need to study     
             // the STM32, RP2040, and nRF a bit more to better understand the time-keeping.
-            let total_ticks = period as u64 * (OVERFLOW_COUNT / div as u16) as u64; 
+            let total_ticks = period as u64 * OVERFLOW_COUNT as u64 + count as u64; 
+            let total_ticks = total_ticks * TICK_HZ / timer_ticks_per_second as u64;
             total_ticks
         })
     }
