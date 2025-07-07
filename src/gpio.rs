@@ -137,17 +137,14 @@ pub mod port4 {
     // macro_rules! allocate_pin{
     //     (Pin:ident, self.n:literal $(, $trait:path)* $(,)?) => {
     #[repr(align(4))]
-    pub struct Pin<S: PinState> {
+    pub struct Pin<S: PinState, const N: u8> {
         _p: PhantomData<S>,
-        n: u8,
     }
 
-    impl AnyPin for Pin<Output<PushPull>> {}
-
-    impl<S: PinState + Sized> Pin<S> {
-        pub fn into_output_push_pull(self, drive_mode: DriveMode) -> Pin<Output<PushPull>> {
+    impl<S: PinState + Sized, const N: u8> Pin<S, N> {
+        pub fn into_output_push_pull(self, drive_mode: DriveMode) -> Pin<Output<PushPull>, N> {
             crate::pfsel::port4::set_pin_function(
-                self.n,
+                N,
                 PortDirection::Output,
                 PullUpMode::Disabled,
                 DrainControl::PushPull,
@@ -161,13 +158,12 @@ pub mod port4 {
 
             Pin {
                 _p: PhantomData,
-                n: self.n,
             }
         }
 
-        pub fn into_alternate_function(self, function: PinFunction) -> Pin<Output<AlternateFunction>> {
+        pub fn into_alternate_function(self, function: PinFunction) -> Pin<Output<AlternateFunction>, N> {
             crate::pfsel::port4::set_pin_function(
-                self.n,
+                N,
                 PortDirection::Output,
                 PullUpMode::Disabled,
                 DrainControl::OpenDrain,
@@ -181,13 +177,12 @@ pub mod port4 {
 
                 Pin {
                     _p: PhantomData,
-                    n: self.n,
                 }
         }
 
-        pub fn into_input_pull_up(&self) -> Pin<Input<PullUp>> {
+        pub fn into_input_pull_up(&self) -> Pin<Input<PullUp>, N> {
             crate::pfsel::port4::set_pin_function(
-                self.n,
+                N,
                 PortDirection::Input,
                 PullUpMode::Enabled,
                 DrainControl::PushPull,
@@ -201,13 +196,12 @@ pub mod port4 {
 
             Pin {
                 _p: PhantomData,
-                n: self.n,
             }
         }
 
-        pub fn into_input_pull_down(&self) -> Pin<Input<PullDown>> {
+        pub fn into_input_pull_down(&self) -> Pin<Input<PullDown>, N> {
             crate::pfsel::port4::set_pin_function(
-                self.n,
+                N,
                 PortDirection::Input,
                 PullUpMode::Disabled,
                 DrainControl::PushPull,
@@ -221,85 +215,65 @@ pub mod port4 {
 
             Pin {
                 _p: PhantomData,
-                n: self.n,
             }
         }
     }
 
-    impl embedded_hal::digital::v2::OutputPin for Pin<Output<PushPull>> {
+    impl<const N: u8> embedded_hal::digital::v2::OutputPin for Pin<Output<PushPull>, N> {
         type Error = core::convert::Infallible;
 
         fn set_high(&mut self) -> Result<(), Self::Error> {
-            crate::pfsel::port4::set_pin_value(self.n, crate::gpio::OutputValue::High);
+            crate::pfsel::port4::set_pin_value(N, crate::gpio::OutputValue::High);
             Ok(())
         }
 
         fn set_low(&mut self) -> Result<(), Self::Error> {
-            crate::pfsel::port4::set_pin_value(self.n, crate::gpio::OutputValue::Low);
+            crate::pfsel::port4::set_pin_value(N, crate::gpio::OutputValue::Low);
             Ok(())
         }
     }
 
-    impl embedded_hal::digital::v2::InputPin for Pin<Input<PullUp>> {
+    impl<const N: u8> embedded_hal::digital::v2::InputPin for Pin<Input<PullUp>, N> {
         type Error = core::convert::Infallible;
 
         fn is_high(&self) -> Result<bool, Self::Error> {
-            Ok(crate::pfsel::port4::get_pin_value(self.n))
+            Ok(crate::pfsel::port4::get_pin_value(N))
         }
 
         fn is_low(&self) -> Result<bool, Self::Error> {
-            Ok(!crate::pfsel::port4::get_pin_value(self.n))
+            Ok(!crate::pfsel::port4::get_pin_value(N))
         }
     }
 
-    impl embedded_hal::digital::v2::InputPin for Pin<Input<PullDown>> {
+    impl<const N: u8> embedded_hal::digital::v2::InputPin for Pin<Input<PullDown>, N> {
         type Error = core::convert::Infallible;
 
         fn is_high(&self) -> Result<bool, Self::Error> {
-            Ok(crate::pfsel::port4::get_pin_value(self.n))
+            Ok(crate::pfsel::port4::get_pin_value(N))
         }
 
         fn is_low(&self) -> Result<bool, Self::Error> {
-            Ok(!crate::pfsel::port4::get_pin_value(self.n))
+            Ok(!crate::pfsel::port4::get_pin_value(N))
         }
     }
-    //     }
-    // }
-
-    // allocate_pin!(Pin, 0);
-    // allocate_pin!(P01, 1);
-    // allocate_pin!(P02, 2);
-    // allocate_pin!(P03, 3);
-    // allocate_pin!(P04, 4);
-    // allocate_pin!(P05, 5);
-    // allocate_pin!(P06, 6);
-    // allocate_pin!(P07, 7);
-    // allocate_pin!(P08, 8);
-    // allocate_pin!(P09, 9);
-    // allocate_pin!(P10, 10);
-    // allocate_pin!(P11, 11);
-    // allocate_pin!(P12, 12);
-    // allocate_pin!(P13, 13);
-    // allocate_pin!(P14, 14);
-    // allocate_pin!(P15, 15);
     
     pub struct Port4Pins {
-        pub p00: Pin<Output<HighZ>>,
-        pub p01: Pin<Output<HighZ>>,
-        pub p02: Pin<Output<HighZ>>,
-        pub p03: Pin<Output<HighZ>>,
-        pub p04: Pin<Output<HighZ>>,
-        pub p05: Pin<Output<HighZ>>,
-        pub p06: Pin<Output<HighZ>>,
-        pub p07: Pin<Output<HighZ>>,
-        pub p08: Pin<Output<HighZ>>,
-        pub p09: Pin<Output<HighZ>>,
-        pub p10: Pin<Output<HighZ>>,
-        pub p11: Pin<Output<HighZ>>,
-        pub p12: Pin<Output<HighZ>>,
-        pub p13: Pin<Output<HighZ>>,
-        pub p14: Pin<Output<HighZ>>,
-        pub p15: Pin<Output<HighZ>>,
+        pub p00: Pin<Output<HighZ>, 0>,
+        pub p01: Pin<Output<HighZ>, 1>,
+        pub p02: Pin<Output<HighZ>, 2>,
+        pub p03: Pin<Output<HighZ>, 3>,
+        pub p04: Pin<Output<HighZ>, 4>,
+        pub p05: Pin<Output<HighZ>, 5>,
+        pub p06: Pin<Output<HighZ>, 6>,
+        pub p07: Pin<Output<HighZ>, 7>,
+        pub p08: Pin<Output<HighZ>, 8>,
+        pub p09: Pin<Output<HighZ>, 9>,
+        pub p10: Pin<Output<HighZ>, 10>,
+        pub p11: Pin<Output<HighZ>, 11>,
+        pub p12: Pin<Output<HighZ>, 12>,
+        pub p13: Pin<Output<HighZ>, 13>,
+        pub p14: Pin<Output<HighZ>, 14>,
+        pub p15: Pin<Output<HighZ>, 15>,
     }
 
     pub struct Port4 {
@@ -318,22 +292,22 @@ pub mod port4 {
 
         pub fn split(&self) -> Port4Pins {
             Port4Pins {
-                p00: Pin { _p: PhantomData, n: 0 },
-                p01: Pin { _p: PhantomData, n: 1 },
-                p02: Pin { _p: PhantomData, n: 2 },
-                p03: Pin { _p: PhantomData, n: 3 },
-                p04: Pin { _p: PhantomData, n: 4 },
-                p05: Pin { _p: PhantomData, n: 5 },
-                p06: Pin { _p: PhantomData, n: 6 },
-                p07: Pin { _p: PhantomData, n: 7 },
-                p08: Pin { _p: PhantomData, n: 8 },
-                p09: Pin { _p: PhantomData, n: 9 },
-                p10: Pin { _p: PhantomData, n: 10 },
-                p11: Pin { _p: PhantomData, n: 11 },
-                p12: Pin { _p: PhantomData, n: 12 },
-                p13: Pin { _p: PhantomData, n: 13 },
-                p14: Pin { _p: PhantomData, n: 14 },
-                p15: Pin { _p: PhantomData, n: 15 },
+                p00: Pin { _p: PhantomData },
+                p01: Pin { _p: PhantomData },
+                p02: Pin { _p: PhantomData },
+                p03: Pin { _p: PhantomData },
+                p04: Pin { _p: PhantomData },
+                p05: Pin { _p: PhantomData },
+                p06: Pin { _p: PhantomData },
+                p07: Pin { _p: PhantomData },
+                p08: Pin { _p: PhantomData },
+                p09: Pin { _p: PhantomData },
+                p10: Pin { _p: PhantomData },
+                p11: Pin { _p: PhantomData },
+                p12: Pin { _p: PhantomData },
+                p13: Pin { _p: PhantomData },
+                p14: Pin { _p: PhantomData },
+                p15: Pin { _p: PhantomData },
             }
         }
     }
