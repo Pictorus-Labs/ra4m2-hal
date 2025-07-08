@@ -1,9 +1,8 @@
-use defmt::Format;
 /// This module is for the clock generation circuit (CGC) on the RA4M2 MCU.
 
 use ra4m2_pac::{sysc::{sckdivcr::{Ick, Pckb, Pckd, Rsv}, sckscr::Cksel}, RegisterValue};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Format)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ClockSource {
     HOCO = 0, // High-speed on-chip oscillator
