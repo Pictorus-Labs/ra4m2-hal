@@ -82,11 +82,12 @@ impl Driver for RenesasDriver {
             let timer_ticks_per_second = TIMER_CLOCK_FREQ.load(Ordering::Relaxed);
             compiler_fence(Ordering::Acquire);
             // Compute the number of timer ticks in an embassy time tick rate.
-            let count = unsafe {
-                // AGT are count down timers, so we need to subtract the current count from the overflow count
-                OVERFLOW_COUNT - ra4m2_pac::AGT0.agt().read().get() as u16
-            };
-            let total_ticks = period as u64 * OVERFLOW_COUNT as u64 + count as u64; 
+            // TODO: figure out correct way to calculate this
+            // let count = unsafe {
+            //     // AGT are count down timers, so we need to subtract the current count from the overflow count
+            //     OVERFLOW_COUNT - ra4m2_pac::AGT0.agt().read().get() as u16
+            // };
+            let total_ticks = period as u64 * OVERFLOW_COUNT as u64; 
             let total_ticks = total_ticks * TICK_HZ / timer_ticks_per_second as u64;
             total_ticks
         })
