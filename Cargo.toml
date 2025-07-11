@@ -11,7 +11,7 @@ cortex-m = { version = "0.7", features = [ "critical-section-single-core",], def
 cortex-m-rt = { version = "0.7" }
 embassy-time-driver = { git = "https://github.com/embassy-rs/embassy.git", rev = "68c8238", optional = true }
 embassy-time = { git = "https://github.com/embassy-rs/embassy.git", rev = "68c8238" }
-embedded-hal = { version = "0.2.7" }
+embedded-hal = { version = "0.2.7", features = ["unproven"] }
 
 [features]
 default = ["embassy_time", "iic0", "port4"]

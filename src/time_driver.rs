@@ -1,6 +1,6 @@
 use embassy_time::TICK_HZ;
 use embassy_time_driver::Driver;
-use ra4m2_pac::{agt0::agtcr::Tstart, NoBitfieldReg};
+use ra4m2_pac::{agt0::agtcr::Tstart};
 use core::{cell::RefCell, sync::atomic::{compiler_fence, AtomicU32, Ordering}};
 use ra4m2_pac::{interrupt};
 use crate::{icu::{clear_interrupt, register_interrupt}, power};
@@ -82,7 +82,8 @@ impl Driver for RenesasDriver {
             let timer_ticks_per_second = TIMER_CLOCK_FREQ.load(Ordering::Relaxed);
             compiler_fence(Ordering::Acquire);
             // Compute the number of timer ticks in an embassy time tick rate.
-            // TODO: figure out correct way to calculate this
+            // TODO: figure out correct way to calculate this, still getting a u64 under / overflow
+            // when the count is included.
             // let count = unsafe {
             //     // AGT are count down timers, so we need to subtract the current count from the overflow count
             //     OVERFLOW_COUNT - ra4m2_pac::AGT0.agt().read().get() as u16

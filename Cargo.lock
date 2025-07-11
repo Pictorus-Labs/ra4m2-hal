@@ -241,7 +241,7 @@ dependencies = [
 [[package]]
 name = "ra4m2-pac"
 version = "0.1.0"
-source = "git+https://github.com/amcelroy/ra-pac#7303b56aa4b0cd7397d9acb59888b0a2bf62d014"
+source = "git+https://github.com/amcelroy/ra-pac#33f0fb5c68dcbe32024e2a254cb06b88f0489996"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
