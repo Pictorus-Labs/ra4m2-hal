@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 // The memory.x file for the RA4M2 needs to be linked. This script copies the existing 
 // memory.x file to the OUT_DIR and lets the linker know where to find it. 
-// Embassy generates this file automatically, while we are just copying it for now.
+// Embassy generates this file automatically, while we are just copying ours for now.
 // https://github.com/embassy-rs/embassy/blob/main/embassy-stm32/build.rs
 
 fn main() {

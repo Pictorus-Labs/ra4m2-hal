@@ -86,10 +86,6 @@ impl Driver for RenesasDriver {
                 // AGT are count down timers, so we need to subtract the current count from the overflow count
                 OVERFLOW_COUNT - ra4m2_pac::AGT0.agt().read().get() as u16
             };
-            // TODO: Revisit this. I think the issue is that now() was being called from different spots and the
-            // Atomic had not been update, but the tick count was. This might have been leading to non-sequential
-            // u64 times that were causing u64 errors when subtracted. It is close-ish, but I need to study     
-            // the STM32, RP2040, and nRF a bit more to better understand the time-keeping.
             let total_ticks = period as u64 * OVERFLOW_COUNT as u64 + count as u64; 
             let total_ticks = total_ticks * TICK_HZ / timer_ticks_per_second as u64;
             total_ticks
