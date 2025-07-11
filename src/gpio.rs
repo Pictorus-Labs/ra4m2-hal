@@ -109,7 +109,7 @@ pub mod port4 {
     use core::{cell::RefCell, marker::PhantomData};
     use ra4m2_pac::Port1;
 
-    use crate::{gpio::{AlternateFunction, AnalogInput, AnyPin, DrainControl, DriveMode, HighZ, Input, InterruptEnable, InterruptEvent, Output, PinState, PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull}};
+    use crate::{gpio::{AlternateFunction, AnalogInput, DrainControl, DriveMode, HighZ, Input, InterruptEnable, InterruptEvent, Output, PinState, PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull}};
 
     // Note Port4 is a struct of r4m2_pac::Port1
     static PORT4: cortex_m::interrupt::Mutex<RefCell<Option<Port1>>> = cortex_m::interrupt::Mutex::new(RefCell::new(None));
@@ -132,10 +132,6 @@ pub mod port4 {
         SDHI = 21,
     }
 
-    /// Macro to allocate a pin with a given name and number and a list of additional traits
-    /// to help constrain the pin type.
-    // macro_rules! allocate_pin{
-    //     (Pin:ident, self.n:literal $(, $trait:path)* $(,)?) => {
     #[repr(align(4))]
     pub struct Pin<S: PinState, const N: u8> {
         _p: PhantomData<S>,

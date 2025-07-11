@@ -4,32 +4,22 @@
 use core::ptr::addr_of_mut;
 
 use cortex_m_rt::entry;
-use defmt::info;
-use num_traits::AsPrimitive;
+use log::info;
 use pictorus_renesas::RenesasClock;
-use ra4m2_hal::{gpio::{port4::Pin, AlternateFunction, Output, PushPull}, i2c::I2c0, sysc::SystemClock};
-use embedded_time::{clock::Clock, duration::{Generic, Microseconds}, fixed_point::FixedPoint, TimeInt};
+use ra4m2_hal::i2c::I2c0;
+use embedded_time::Clock;
 use embedded_hal::digital::v2::OutputPin;
+use embedded_alloc::LlffHeap as Heap;
 
 use panic_probe as _;
-use defmt_rtt as _;
 
 #[global_allocator]
-static HEAP: embedded_alloc::Heap = embedded_alloc::Heap::empty();
-
-pub fn embedded_duration_to_us<T, U>(duration: Generic<T>) -> U
-where
-    T: TimeInt + AsPrimitive<U> + Copy,
-    U: AsPrimitive<T> + Copy,
-{
-    let duration_us: Microseconds<T> = duration
-        .try_into()
-        .expect("Could not cast generic Duration to Microseconds!");
-    duration_us.integer().as_()
-}
+static HEAP: Heap = Heap::empty();
 
 #[entry]
 fn main() -> ! {
+    rtt_target::rtt_init_log!();
+
     {
         use core::mem::MaybeUninit;
         const HEAP_SIZE: usize = 65_536;
@@ -117,7 +107,7 @@ fn main() -> ! {
 
 
         cortex_m::asm::delay(240_000); // Adjust the delay as needed
-        let us: u64 = embedded_duration_to_us(clock.try_now().unwrap() - app_start_time);
-        info!("Current time: {:?}, Accel X: {}, Y: {}, Z: {}", us, accel_x, accel_y, accel_z)
+        let us = clock.try_now().unwrap().duration_since_epoch().integer();
+        info!("Current time: {:?}, Accel X: {}, Y: {}, Z: {}", us, accel_x, accel_y, accel_z);
     }
 }
