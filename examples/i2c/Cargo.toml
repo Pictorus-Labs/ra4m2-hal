@@ -7,7 +7,6 @@ publish = false
 [dependencies]
 cortex-m = { version = "0.7", features = [ "critical-section-single-core",], default-features = false }
 cortex-m-rt = { version = "0.7" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy.git", rev = "68c8238", features = [ "generic-queue",], default-features = false }
 embedded-alloc = { version = "0.6.0", default-features = false, features = ["llff"] }
 embedded-io = { version = "0.6.1", default-features = false }
 log = { version = "0.4.21", default-features = false }
@@ -16,6 +15,5 @@ panic-probe = { version = "1.0.0", features = [ "print-rtt",], default-features 
 ra4m2-pac = { git = "https://github.com/amcelroy/ra-pac", features = ["all", "rt"] }
 rtt-target = { git = "https://github.com/Pictorus-Labs/rtt-target", branch = "alignment-fix", default-features = false, features = ["log"] }
 ra4m2-hal = { path = "../../../ra4m2-hal" }
-pictorus-renesas = { git = "https://github.com/Pictorus-Labs/pictorus-rs", rev = "5c8cb12d143adfbc7e25d182f4e098b436e7117c"}
 embedded-time = "0.12.1"
 embedded-hal = { version = "0.2.7" }

@@ -132,7 +132,7 @@ pub mod port4 {
         SDHI = 21,
     }
 
-    #[repr(align(4))]
+    #[derive(Debug, Clone, Copy)]
     pub struct Pin<S: PinState, const N: u8> {
         _p: PhantomData<S>,
     }
@@ -215,9 +215,11 @@ pub mod port4 {
         }
     }
 
-    impl<const N: u8> embedded_hal::digital::v2::OutputPin for Pin<Output<PushPull>, N> {
+    impl<const N: u8> embedded_hal::digital::ErrorType for Pin<Output<PushPull>, N> {
         type Error = core::convert::Infallible;
+    }
 
+    impl<const N: u8> embedded_hal::digital::OutputPin for Pin<Output<PushPull>, N> {
         fn set_high(&mut self) -> Result<(), Self::Error> {
             crate::pfsel::port4::set_pin_value(N, crate::gpio::OutputValue::High);
             Ok(())
@@ -229,26 +231,30 @@ pub mod port4 {
         }
     }
 
-    impl<const N: u8> embedded_hal::digital::v2::InputPin for Pin<Input<PullUp>, N> {
+    impl<const N: u8> embedded_hal::digital::ErrorType for Pin<Input<PullUp>, N> {
         type Error = core::convert::Infallible;
+    }
 
-        fn is_high(&self) -> Result<bool, Self::Error> {
+    impl<const N: u8> embedded_hal::digital::InputPin for Pin<Input<PullUp>, N> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(crate::pfsel::port4::get_pin_value(N))
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(!crate::pfsel::port4::get_pin_value(N))
         }
     }
 
-    impl<const N: u8> embedded_hal::digital::v2::InputPin for Pin<Input<PullDown>, N> {
+    impl<const N: u8> embedded_hal::digital::ErrorType for Pin<Input<PullDown>, N> {
         type Error = core::convert::Infallible;
+    }
 
-        fn is_high(&self) -> Result<bool, Self::Error> {
+    impl<const N: u8> embedded_hal::digital::InputPin for Pin<Input<PullDown>, N> {
+        fn is_high(&mut self) -> Result<bool, Self::Error> {
             Ok(crate::pfsel::port4::get_pin_value(N))
         }
 
-        fn is_low(&self) -> Result<bool, Self::Error> {
+        fn is_low(&mut self) -> Result<bool, Self::Error> {
             Ok(!crate::pfsel::port4::get_pin_value(N))
         }
     }

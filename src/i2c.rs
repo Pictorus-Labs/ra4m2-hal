@@ -1,4 +1,3 @@
-use embedded_hal::blocking::i2c::SevenBitAddress;
 use ra4m2_pac::{iic0::{iccr1::{Ice, Iicrst}, iccr2::{Sp, St}, icmr1::{Bc, Bcwp}, icmr3::{Ackbt, Ackwp, Wait}, icser::Sar0E, icsr2::{Nackf, Stop}}, Iic0, RegisterValue};
 use crate::power;
 
@@ -23,6 +22,19 @@ pub enum I2cError {
     PeripheralNotStopped,
     TransmitBufferNotReady,
     DataNotReceived,
+}
+
+
+impl embedded_hal::i2c::Error for I2cError {
+    fn kind(&self) -> embedded_hal::i2c::ErrorKind {
+        match *self {
+            I2cError::BusBusy => embedded_hal::i2c::ErrorKind::Bus,
+            I2cError::SlaveNotResponding => embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Address),
+            I2cError::PeripheralNotStopped => embedded_hal::i2c::ErrorKind::Other,
+            I2cError::TransmitBufferNotReady => embedded_hal::i2c::ErrorKind::Other,
+            I2cError::DataNotReceived => embedded_hal::i2c::ErrorKind::NoAcknowledge(embedded_hal::i2c::NoAcknowledgeSource::Data),
+        }
+    }
 }
 
 fn get_slave_address(address: u8, direction: Direction) -> u8 {
@@ -341,29 +353,23 @@ macro_rules! define_i2c {
             }
         }
 
-        impl embedded_hal::blocking::i2c::Write<SevenBitAddress> for I2c0 {
-
+        impl embedded_hal::i2c::ErrorType for $name {
             type Error = I2cError;
-
-            fn write(&mut self, address: u8, write: &[u8]) -> Result<(), Self::Error> {
-                self.write(address, write)
-            }
         }
 
-        impl embedded_hal::blocking::i2c::Read<SevenBitAddress> for I2c0 {
-            type Error = I2cError;
-
-            fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
-                self.read(address, buffer)
-            }
-        }
-
-        impl embedded_hal::blocking::i2c::WriteRead<SevenBitAddress> for I2c0 {
-            type Error = I2cError;
-
-            fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
-                self.write(address, write)?;
-                self.read(address, read)
+        impl embedded_hal::i2c::I2c<embedded_hal::i2c::SevenBitAddress> for $name {
+            fn transaction(&mut self, address: u8, operations: &mut [embedded_hal::i2c::Operation<'_>]) -> Result<(), Self::Error> {
+                for operation in operations {
+                    match operation {
+                        embedded_hal::i2c::Operation::Write(write) => {
+                            self.write(address, write)?;
+                        }
+                        embedded_hal::i2c::Operation::Read(read) => {
+                            self.read(address, read)?;
+                        }
+                    }
+                }
+                Ok(())
             }
         }
     }
