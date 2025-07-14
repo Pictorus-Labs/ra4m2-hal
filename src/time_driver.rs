@@ -1,3 +1,4 @@
+use embassy_time_driver::Driver;
 use embedded_time::{rate::Fraction, Instant};
 use ra4m2_pac::{agt0::agtcr::Tstart};
 use core::{cell::RefCell, sync::atomic::{compiler_fence, AtomicU32, Ordering}};
@@ -24,9 +25,6 @@ static TIMER: cortex_m::interrupt::Mutex<RefCell<Option<T>>> = cortex_m::interru
 // 3MHz, this is needed to reconcile the timer dividers, core clock, and make sure the 1MHz TICK_HZ is all
 // aligned. I can't make AGT0 run at exactly 1MHz. 
 static TIMER_CLOCK_FREQ: AtomicU32 = AtomicU32::new(3_000_000); 
-
-// The driver instance to keep track of overflow events
-static DRIVER: RenesasDriver = RenesasDriver { period: AtomicU32::new(0) };
 
 #[cfg(feature = "agt0")]
 #[interrupt]
@@ -68,9 +66,54 @@ impl RenesasDriver {
     }
 }
 
+embassy_time_driver::time_driver_impl!(
+    static DRIVER: RenesasDriver = RenesasDriver {
+        period: AtomicU32::new(0)
+    }
+);
+
+impl Driver for RenesasDriver {
+    /// Note: we are using an old commit of the embassy-time-driver crate:
+    /// https://github.com/embassy-rs/embassy/tree/68c823881262989b2ef462d6d4736cc886598b50
+
+    fn now(&self) -> u64 {
+        cortex_m::interrupt::free(|_cs| {
+            let period = DRIVER.period.load(Ordering::Relaxed);
+            let timer_ticks_per_second = TIMER_CLOCK_FREQ.load(Ordering::Relaxed);
+            compiler_fence(Ordering::Acquire);
+            // Compute the number of timer ticks in an embassy time tick rate.
+            // TODO: figure out correct way to calculate this, still getting a u64 under / overflow
+            // when the count is included.
+            // let count = unsafe {
+            //     // AGT are count down timers, so we need to subtract the current count from the overflow count
+            //     OVERFLOW_COUNT - ra4m2_pac::AGT0.agt().read().get() as u16
+            // };
+            let total_ticks = period as u64 * OVERFLOW_COUNT as u64; 
+            let total_ticks = total_ticks * TICK_HZ / timer_ticks_per_second as u64;
+            total_ticks
+        })
+    }
+
+    unsafe fn allocate_alarm(&self) -> Option<embassy_time_driver::AlarmHandle> {
+        None
+    }
+
+    fn set_alarm_callback(&self, _alarm: embassy_time_driver::AlarmHandle, _callback: fn(*mut ()), _ctx: *mut ()) {
+        // TODO: add alarms later
+    }
+
+    fn set_alarm(&self, _alarm: embassy_time_driver::AlarmHandle, _timestamp: u64) -> bool {
+        // TODO: add alarms later
+        return false;
+    }
+}
+
+#[cfg(feature="embedded_time")]
 #[derive(Default)]
 pub struct RenesasClock;
 
+
+#[cfg(feature="embedded_time")]
 impl embedded_time::Clock for RenesasClock {
     type T = u64;
 
