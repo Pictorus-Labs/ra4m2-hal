@@ -5,13 +5,14 @@ use core::ptr::addr_of_mut;
 
 use cortex_m_rt::entry;
 use log::info;
-use pictorus_renesas::RenesasClock;
 use ra4m2_hal::i2c::I2c0;
 use embedded_time::Clock;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::OutputPin;
+use embedded_hal::i2c::{I2c, Operation};
 use embedded_alloc::LlffHeap as Heap;
 
 use panic_probe as _;
+use ra4m2_hal::time_driver::RenesasClock;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -60,14 +61,11 @@ fn main() -> ! {
     let mut p4_04_green_led = p4.split().p04.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
     let mut p4_05_red_led = p4.split().p05.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
 
-    info!("The time is now {:?}us", embassy_time::Instant::now().as_micros());
 
-    let clock = RenesasClock::default();
+    info!("The time is now {:?}us", RenesasClock::default().try_now().unwrap().duration_since_epoch().integer());
 
     // This demo talks to an mpu-6050 accelerometer/gyro sensor over I2C.
     let mut i2c0 = I2c0::new(p.IIC0);
-
-    let app_start_time = clock.try_now().unwrap();
 
     let mut buffer = [0u8; 14]; // Fetch 14 bytes for accelerometer, temp, and gyro data
 
@@ -80,8 +78,13 @@ fn main() -> ! {
 
     loop {
         //info!("Hello World, Renesas RA4M2 from Rust!");
-        i2c0.write(0x68, &[0x3B]).unwrap();
-        i2c0.read(0x68, &mut buffer).unwrap();
+
+        // Embedded HAL 1.0.0 I2C example
+        i2c0.transaction(0x68, &mut [Operation::Write(&[0x3B]), Operation::Read(&mut buffer)]).unwrap();
+
+        // Using the non-embedded-hal I2C API
+        // i2c0.write(0x68, &[0x3B]).unwrap();
+        // i2c0.read(0x68, &mut buffer).unwrap();
 
         let accel_x = i16::from_be_bytes([buffer[0], buffer[1]]);
         let accel_y = i16::from_be_bytes([buffer[2], buffer[3]]);
@@ -105,9 +108,8 @@ fn main() -> ! {
             p4_05_red_led.set_low().unwrap();
         }
 
-
         cortex_m::asm::delay(240_000); // Adjust the delay as needed
-        let us = clock.try_now().unwrap().duration_since_epoch().integer();
+        let us = RenesasClock::default().try_now().unwrap().duration_since_epoch().integer();
         info!("Current time: {:?}, Accel X: {}, Y: {}, Z: {}", us, accel_x, accel_y, accel_z);
     }
 }

@@ -9,14 +9,14 @@ license = "MIT"
 ra4m2-pac = { git = "https://github.com/amcelroy/ra-pac", features = ["all", "rt"] }
 cortex-m = { version = "0.7", features = [ "critical-section-single-core",], default-features = false }
 cortex-m-rt = { version = "0.7" }
-embassy-time-driver = { git = "https://github.com/embassy-rs/embassy.git", rev = "68c8238", optional = true }
-embassy-time = { git = "https://github.com/embassy-rs/embassy.git", rev = "68c8238" }
-embedded-hal = { version = "0.2.7", features = ["unproven"] }
+embedded-hal = { version = "1.0.0" }
+embedded-time = { version = "0.12.1" }
+pictorus-renesas = { path="../pictorus-rs/pictorus-renesas" }
 
 [features]
-default = ["embassy_time", "iic0", "port4"]
+default = ["embedded_time", "iic0", "port4"]
 
-embassy_time = ["dep:embassy-time-driver", "agt0"]
+embedded_time = ["agt0"]
 
 agt0 = []
 iic0 = []
