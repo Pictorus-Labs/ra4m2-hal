@@ -372,32 +372,6 @@ macro_rules! define_i2c {
                 Ok(())
             }
         }
-
-        // impl embedded_hal::blocking::i2c::Write<SevenBitAddress> for $name {
-
-        //     type Error = I2cError;
-
-        //     fn write(&mut self, address: u8, write: &[u8]) -> Result<(), Self::Error> {
-        //         self.write(address, write)
-        //     }
-        // }
-
-        // impl embedded_hal::blocking::i2c::Read<SevenBitAddress> for $name {
-        //     type Error = I2cError;
-
-        //     fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
-        //         self.read(address, buffer)
-        //     }
-        // }
-
-        // impl embedded_hal::blocking::i2c::WriteRead<SevenBitAddress> for $name {
-        //     type Error = I2cError;
-
-        //     fn write_read(&mut self, address: u8, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
-        //         self.write(address, write)?;
-        //         self.read(address, read)
-        //     }
-        // }
     }
 }
 #[cfg(feature = "iic0")]
