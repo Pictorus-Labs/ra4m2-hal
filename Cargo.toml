@@ -11,7 +11,6 @@ cortex-m = { version = "0.7", features = [ "critical-section-single-core",], def
 cortex-m-rt = { version = "0.7" }
 embedded-hal = { version = "1.0.0" }
 embedded-time = { version = "0.12.1" }
-pictorus-renesas = { path="../pictorus-rs/pictorus-renesas" }
 
 [features]
 default = ["embedded_time", "iic0", "port4"]
