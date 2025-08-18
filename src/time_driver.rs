@@ -94,17 +94,8 @@ impl Driver for RenesasDriver {
         })
     }
 
-    unsafe fn allocate_alarm(&self) -> Option<embassy_time_driver::AlarmHandle> {
-        None
-    }
-
-    fn set_alarm_callback(&self, _alarm: embassy_time_driver::AlarmHandle, _callback: fn(*mut ()), _ctx: *mut ()) {
-        // TODO: add alarms later
-    }
-
-    fn set_alarm(&self, _alarm: embassy_time_driver::AlarmHandle, _timestamp: u64) -> bool {
-        // TODO: add alarms later
-        return false;
+    fn schedule_wake(&self, at: u64, waker: &core::task::Waker) {
+        todo!()
     }
 }
 
