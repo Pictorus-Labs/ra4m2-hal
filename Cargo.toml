@@ -1,6 +1,6 @@
 [package]
 name = "ra4m2-hal"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 build = "build.rs"
 license = "MIT"
@@ -23,4 +23,11 @@ embedded_time = ["agt0"]
 agt0 = []
 iic0 = []
 iic1 = []
+port0 = []
+port1 = []
+port2 = []
+port3 = []
 port4 = []
+port5 = []
+port6 = []
+port7 = []

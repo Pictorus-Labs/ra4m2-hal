@@ -34,7 +34,7 @@ pub enum DrainControl {
 pub enum DriveMode {
     Low = 0,
     Middle = 1,
-    High = 4,
+    High = 3,
 }
 
 pub enum InterruptEvent {
@@ -57,6 +57,28 @@ pub enum AnalogInput {
 pub enum PortMode {
     Normal = 0,
     Alternate = 1,
+}
+
+/// Peripheral function encoding for the PSEL field of the PmnPFS registers.
+/// The encoding is the same for every port, but which functions are actually
+/// available on a given pin varies — check the "Peripheral Select Settings"
+/// tables in the RA4M2 User's Manual for the pin in question.
+#[derive(Debug, Clone, Copy)]
+pub enum PinFunction {
+    GPIO = 0,
+    AGT = 1,
+    GPTA = 2,
+    GPTB = 3,
+    SCIA = 4,
+    SCIB = 5,
+    IIC = 7,
+    RTC = 9,
+    ADC = 10,
+    CTSU = 12,
+    CAN = 16,
+    SSIE = 18,
+    USBFS = 19,
+    SDHI = 21,
 }
 
 pub trait AnyPin {}
@@ -103,224 +125,208 @@ impl sealed::Sealed for PullUp {}
 impl sealed::Sealed for PullDown {}
 impl sealed::Sealed for Floating {}
 
-/// Module for Port 4
-#[cfg(feature = "port4")]
-pub mod port4 {
-    use core::{cell::RefCell, marker::PhantomData};
-    use ra4m2_pac::Port1;
+/// Generates the GPIO module for one port. Invoked for every port via
+/// `for_each_port!` in `port_map.rs` — the single source of truth for which
+/// pins exist. Entries are `(field, pin_number, <pfs accessor tokens>)`; the
+/// accessor tokens are consumed by the `pfs_port!` callback in `pfsel.rs` and
+/// ignored here.
+///
+/// Note the PAC reuses one register-block type per group of ports with an
+/// identical layout: `ra4m2_pac::Port0` is the type of PORT0/5/6/7 and
+/// `ra4m2_pac::Port1` the type of PORT1/2/3/4 (same registers, different base
+/// address). The constructor therefore cannot verify that the peripheral you
+/// pass in is the matching `PORTn` instance — pass the right one.
+macro_rules! gpio_port {
+    (
+        $feature:literal, $mod_name:ident, $port_struct:ident, $pins_struct:ident, $pac_ty:ty,
+        [ $( ($field:ident, $n:literal, $($_acc:tt)+) ),+ $(,)? ]
+    ) => {
+        #[cfg(feature = $feature)]
+        pub mod $mod_name {
+            use core::marker::PhantomData;
 
-    use crate::{gpio::{AlternateFunction, AnalogInput, DrainControl, DriveMode, HighZ, Input, InterruptEnable, InterruptEvent, Output, PinState, PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull}};
+            use crate::gpio::{
+                AlternateFunction, AnalogInput, DrainControl, DriveMode, Floating, HighZ, Input,
+                InputState, InterruptEnable, InterruptEvent, OpenDrain, Output, PinState,
+                PortDirection, PortMode, PullDown, PullUp, PullUpMode, PushPull,
+            };
+            pub use crate::gpio::PinFunction;
 
-    // Note Port4 is a struct of r4m2_pac::Port1
-    static PORT4: cortex_m::interrupt::Mutex<RefCell<Option<Port1>>> = cortex_m::interrupt::Mutex::new(RefCell::new(None));
-
-    #[derive(Debug, Clone, Copy)]
-    pub enum PinFunction {
-        GPIO = 0,
-        AGT = 1,
-        GPTA = 2,
-        GPTB = 3,
-        SCIA = 4,
-        SCIB = 5,
-        IIC = 7, 
-        RTC = 9,
-        ADC = 10,
-        CTSU = 12,
-        CAN = 16,
-        SSIE = 18,
-        USBFS = 19,
-        SDHI = 21,
-    }
-
-    #[derive(Debug, Clone, Copy)]
-    pub struct Pin<S: PinState, const N: u8> {
-        _p: PhantomData<S>,
-    }
-
-    impl<S: PinState + Sized, const N: u8> Pin<S, N> {
-        pub fn into_output_push_pull(self, drive_mode: DriveMode) -> Pin<Output<PushPull>, N> {
-            crate::pfsel::port4::set_pin_function(
-                N,
-                PortDirection::Output,
-                PullUpMode::Disabled,
-                DrainControl::PushPull,
-                drive_mode,
-                InterruptEvent::DontCare,
-                InterruptEnable::Disabled,
-                AnalogInput::Disabled,
-                PinFunction::GPIO,
-                PortMode::Normal,
-            );
-
-            Pin {
-                _p: PhantomData,
+            #[derive(Debug, Clone, Copy)]
+            pub struct Pin<S: PinState, const N: u8> {
+                _p: PhantomData<S>,
             }
-        }
 
-        pub fn into_alternate_function(self, function: PinFunction) -> Pin<Output<AlternateFunction>, N> {
-            crate::pfsel::port4::set_pin_function(
-                N,
-                PortDirection::Output,
-                PullUpMode::Disabled,
-                DrainControl::OpenDrain,
-                DriveMode::Low,
-                InterruptEvent::DontCare,
-                InterruptEnable::Disabled,
-                AnalogInput::Disabled,
-                function,
-                PortMode::Alternate,
-                );
+            impl<S: PinState + Sized, const N: u8> Pin<S, N> {
+                pub fn into_output_push_pull(self, drive_mode: DriveMode) -> Pin<Output<PushPull>, N> {
+                    crate::pfsel::$mod_name::set_pin_function(
+                        N,
+                        PortDirection::Output,
+                        PullUpMode::Disabled,
+                        DrainControl::PushPull,
+                        drive_mode,
+                        InterruptEvent::DontCare,
+                        InterruptEnable::Disabled,
+                        AnalogInput::Disabled,
+                        PinFunction::GPIO,
+                        PortMode::Normal,
+                    );
 
-                Pin {
-                    _p: PhantomData,
+                    Pin { _p: PhantomData }
                 }
-        }
 
-        pub fn into_input_pull_up(&self) -> Pin<Input<PullUp>, N> {
-            crate::pfsel::port4::set_pin_function(
-                N,
-                PortDirection::Input,
-                PullUpMode::Enabled,
-                DrainControl::PushPull,
-                DriveMode::Low,
-                InterruptEvent::DontCare,
-                InterruptEnable::Disabled,
-                AnalogInput::Disabled,
-                PinFunction::GPIO,
-                PortMode::Normal,
-            );
+                pub fn into_output_open_drain(self, drive_mode: DriveMode) -> Pin<Output<OpenDrain>, N> {
+                    crate::pfsel::$mod_name::set_pin_function(
+                        N,
+                        PortDirection::Output,
+                        PullUpMode::Disabled,
+                        DrainControl::OpenDrain,
+                        drive_mode,
+                        InterruptEvent::DontCare,
+                        InterruptEnable::Disabled,
+                        AnalogInput::Disabled,
+                        PinFunction::GPIO,
+                        PortMode::Normal,
+                    );
 
-            Pin {
-                _p: PhantomData,
+                    Pin { _p: PhantomData }
+                }
+
+                pub fn into_alternate_function(self, function: PinFunction) -> Pin<Output<AlternateFunction>, N> {
+                    crate::pfsel::$mod_name::set_pin_function(
+                        N,
+                        PortDirection::Output,
+                        PullUpMode::Disabled,
+                        DrainControl::OpenDrain,
+                        DriveMode::Low,
+                        InterruptEvent::DontCare,
+                        InterruptEnable::Disabled,
+                        AnalogInput::Disabled,
+                        function,
+                        PortMode::Alternate,
+                    );
+
+                    Pin { _p: PhantomData }
+                }
+
+                pub fn into_input_pull_up(self) -> Pin<Input<PullUp>, N> {
+                    crate::pfsel::$mod_name::set_pin_function(
+                        N,
+                        PortDirection::Input,
+                        PullUpMode::Enabled,
+                        DrainControl::PushPull,
+                        DriveMode::Low,
+                        InterruptEvent::DontCare,
+                        InterruptEnable::Disabled,
+                        AnalogInput::Disabled,
+                        PinFunction::GPIO,
+                        PortMode::Normal,
+                    );
+
+                    Pin { _p: PhantomData }
+                }
+
+                pub fn into_input_pull_down(self) -> Pin<Input<PullDown>, N> {
+                    crate::pfsel::$mod_name::set_pin_function(
+                        N,
+                        PortDirection::Input,
+                        PullUpMode::Disabled,
+                        DrainControl::PushPull,
+                        DriveMode::Low,
+                        InterruptEvent::DontCare,
+                        InterruptEnable::Disabled,
+                        AnalogInput::Disabled,
+                        PinFunction::GPIO,
+                        PortMode::Normal,
+                    );
+
+                    Pin { _p: PhantomData }
+                }
+
+                pub fn into_input_floating(self) -> Pin<Input<Floating>, N> {
+                    crate::pfsel::$mod_name::set_pin_function(
+                        N,
+                        PortDirection::Input,
+                        PullUpMode::Disabled,
+                        DrainControl::PushPull,
+                        DriveMode::Low,
+                        InterruptEvent::DontCare,
+                        InterruptEnable::Disabled,
+                        AnalogInput::Disabled,
+                        PinFunction::GPIO,
+                        PortMode::Normal,
+                    );
+
+                    Pin { _p: PhantomData }
+                }
+            }
+
+            impl<S: PinState, const N: u8> embedded_hal::digital::ErrorType for Pin<S, N> {
+                type Error = core::convert::Infallible;
+            }
+
+            impl<const N: u8> embedded_hal::digital::OutputPin for Pin<Output<PushPull>, N> {
+                fn set_high(&mut self) -> Result<(), Self::Error> {
+                    crate::pfsel::$mod_name::set_pin_value(N, crate::gpio::OutputValue::High);
+                    Ok(())
+                }
+
+                fn set_low(&mut self) -> Result<(), Self::Error> {
+                    crate::pfsel::$mod_name::set_pin_value(N, crate::gpio::OutputValue::Low);
+                    Ok(())
+                }
+            }
+
+            impl<const N: u8> embedded_hal::digital::OutputPin for Pin<Output<OpenDrain>, N> {
+                fn set_high(&mut self) -> Result<(), Self::Error> {
+                    crate::pfsel::$mod_name::set_pin_value(N, crate::gpio::OutputValue::High);
+                    Ok(())
+                }
+
+                fn set_low(&mut self) -> Result<(), Self::Error> {
+                    crate::pfsel::$mod_name::set_pin_value(N, crate::gpio::OutputValue::Low);
+                    Ok(())
+                }
+            }
+
+            impl<S: InputState, const N: u8> embedded_hal::digital::InputPin for Pin<Input<S>, N> {
+                fn is_high(&mut self) -> Result<bool, Self::Error> {
+                    Ok(crate::pfsel::$mod_name::get_pin_value(N))
+                }
+
+                fn is_low(&mut self) -> Result<bool, Self::Error> {
+                    Ok(!crate::pfsel::$mod_name::get_pin_value(N))
+                }
+            }
+
+            pub struct $pins_struct {
+                $( pub $field: Pin<Output<HighZ>, $n>, )+
+            }
+
+            pub struct $port_struct {
+                _port: $pac_ty,
+            }
+
+            impl $port_struct {
+                pub fn new(port: $pac_ty) -> Self {
+                    $port_struct { _port: port }
+                }
+
+                /// Consumes the port and hands out one singleton per pin. Taking
+                /// `self` means this can only be called once, so typed pins can't
+                /// be duplicated.
+                pub fn split(self) -> $pins_struct {
+                    $pins_struct {
+                        $( $field: Pin { _p: PhantomData }, )+
+                    }
+                }
             }
         }
-
-        pub fn into_input_pull_down(&self) -> Pin<Input<PullDown>, N> {
-            crate::pfsel::port4::set_pin_function(
-                N,
-                PortDirection::Input,
-                PullUpMode::Disabled,
-                DrainControl::PushPull,
-                DriveMode::Low,
-                InterruptEvent::DontCare,
-                InterruptEnable::Disabled,
-                AnalogInput::Disabled,
-                PinFunction::GPIO,
-                PortMode::Normal,
-            );
-
-            Pin {
-                _p: PhantomData,
-            }
-        }
-    }
-
-    impl<const N: u8> embedded_hal::digital::ErrorType for Pin<Output<PushPull>, N> {
-        type Error = core::convert::Infallible;
-    }
-
-    impl<const N: u8> embedded_hal::digital::OutputPin for Pin<Output<PushPull>, N> {
-        fn set_high(&mut self) -> Result<(), Self::Error> {
-            crate::pfsel::port4::set_pin_value(N, crate::gpio::OutputValue::High);
-            Ok(())
-        }
-
-        fn set_low(&mut self) -> Result<(), Self::Error> {
-            crate::pfsel::port4::set_pin_value(N, crate::gpio::OutputValue::Low);
-            Ok(())
-        }
-    }
-
-    impl<const N: u8> embedded_hal::digital::ErrorType for Pin<Input<PullUp>, N> {
-        type Error = core::convert::Infallible;
-    }
-
-    impl<const N: u8> embedded_hal::digital::InputPin for Pin<Input<PullUp>, N> {
-        fn is_high(&mut self) -> Result<bool, Self::Error> {
-            Ok(crate::pfsel::port4::get_pin_value(N))
-        }
-
-        fn is_low(&mut self) -> Result<bool, Self::Error> {
-            Ok(!crate::pfsel::port4::get_pin_value(N))
-        }
-    }
-
-    impl<const N: u8> embedded_hal::digital::ErrorType for Pin<Input<PullDown>, N> {
-        type Error = core::convert::Infallible;
-    }
-
-    impl<const N: u8> embedded_hal::digital::InputPin for Pin<Input<PullDown>, N> {
-        fn is_high(&mut self) -> Result<bool, Self::Error> {
-            Ok(crate::pfsel::port4::get_pin_value(N))
-        }
-
-        fn is_low(&mut self) -> Result<bool, Self::Error> {
-            Ok(!crate::pfsel::port4::get_pin_value(N))
-        }
-    }
-    
-    pub struct Port4Pins {
-        pub p00: Pin<Output<HighZ>, 0>,
-        pub p01: Pin<Output<HighZ>, 1>,
-        pub p02: Pin<Output<HighZ>, 2>,
-        pub p03: Pin<Output<HighZ>, 3>,
-        pub p04: Pin<Output<HighZ>, 4>,
-        pub p05: Pin<Output<HighZ>, 5>,
-        pub p06: Pin<Output<HighZ>, 6>,
-        pub p07: Pin<Output<HighZ>, 7>,
-        pub p08: Pin<Output<HighZ>, 8>,
-        pub p09: Pin<Output<HighZ>, 9>,
-        pub p10: Pin<Output<HighZ>, 10>,
-        pub p11: Pin<Output<HighZ>, 11>,
-        pub p12: Pin<Output<HighZ>, 12>,
-        pub p13: Pin<Output<HighZ>, 13>,
-        pub p14: Pin<Output<HighZ>, 14>,
-        pub p15: Pin<Output<HighZ>, 15>,
-    }
-
-    pub struct Port4 {
-        // Note Port4 is a struct of r4m2_pac::Port1
-        _port4: ra4m2_pac::Port1, 
-    }
-
-    impl Port4 {
-        // Note Port4 is a struct of r4m2_pac::Port1
-        pub fn new(port4: ra4m2_pac::Port1) -> Self {
-            cortex_m::interrupt::free(|cs| {
-                PORT4.borrow(cs).replace(Some(port4));
-            });
-            Port4 { _port4: port4 }
-        }
-
-        pub fn split(&self) -> Port4Pins {
-            Port4Pins {
-                p00: Pin { _p: PhantomData },
-                p01: Pin { _p: PhantomData },
-                p02: Pin { _p: PhantomData },
-                p03: Pin { _p: PhantomData },
-                p04: Pin { _p: PhantomData },
-                p05: Pin { _p: PhantomData },
-                p06: Pin { _p: PhantomData },
-                p07: Pin { _p: PhantomData },
-                p08: Pin { _p: PhantomData },
-                p09: Pin { _p: PhantomData },
-                p10: Pin { _p: PhantomData },
-                p11: Pin { _p: PhantomData },
-                p12: Pin { _p: PhantomData },
-                p13: Pin { _p: PhantomData },
-                p14: Pin { _p: PhantomData },
-                p15: Pin { _p: PhantomData },
-            }
-        }
-    }
+    };
 }
 
+// The per-port pin lists live in `port_map.rs`, shared with `pfsel.rs` so the
+// pin set and its register mapping can't drift apart.
+use crate::port_map::for_each_port;
 
-
-
-
-
-
-
-
-
+for_each_port!(gpio_port);

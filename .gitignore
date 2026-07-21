@@ -1,2 +1,2 @@
-target/**/*
-examples/i2c/target/**/*
+target/
+.DS_Store

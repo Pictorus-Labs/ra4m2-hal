@@ -1,0 +1,66 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            // Requires the probe-rs debugger extension (probe-rs.probe-rs-debugger).
+            // Chip is the 512K-flash part on the EK-RA4M2; swap for R7FA4M2AB/AC
+            // if your board carries a different variant.
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "Debug example-gpio (probe-rs)",
+            "cwd": "${workspaceFolder}",
+            "chip": "R7FA4M2AD",
+            "preLaunchTask": "build example-gpio",
+            "connectUnderReset": false,
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "haltAfterReset": false
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "${workspaceFolder}/examples/gpio/target/thumbv8m.main-none-eabihf/debug/example-gpio",
+                    "rttEnabled": true,
+                    "rttChannelFormats": [
+                        {
+                            "channelNumber": 0,
+                            "dataFormat": "String",
+                            "showTimestamps": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "Debug example-i2c (probe-rs)",
+            "cwd": "${workspaceFolder}",
+            "chip": "R7FA4M2AD",
+            "preLaunchTask": "build example-i2c",
+            "connectUnderReset": false,
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "haltAfterReset": false
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "${workspaceFolder}/examples/i2c/target/thumbv8m.main-none-eabihf/debug/example-i2c",
+                    "rttEnabled": true,
+                    "rttChannelFormats": [
+                        {
+                            "channelNumber": 0,
+                            "dataFormat": "String",
+                            "showTimestamps": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
