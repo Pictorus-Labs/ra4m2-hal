@@ -152,7 +152,7 @@ macro_rules! gpio_port {
             };
             pub use crate::gpio::PinFunction;
 
-            #[derive(Debug, Clone, Copy)]
+            #[derive(Debug)]
             pub struct Pin<S: PinState, const N: u8> {
                 _p: PhantomData<S>,
             }
@@ -313,8 +313,12 @@ macro_rules! gpio_port {
                 }
 
                 /// Consumes the port and hands out one singleton per pin. Taking
-                /// `self` means this can only be called once, so typed pins can't
-                /// be duplicated.
+                /// `self` means this can only be called once per port instance,
+                /// so typed pins can't be duplicated through this API. Caveat:
+                /// the PAC's port tokens are `Copy` and shared per port group,
+                /// so constructing the port twice (or with the wrong `PORTn`
+                /// token) still compiles — see "Known GPIO limitations" in the
+                /// README.
                 pub fn split(self) -> $pins_struct {
                     $pins_struct {
                         $( $field: Pin { _p: PhantomData }, )+
