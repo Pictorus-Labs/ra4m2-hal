@@ -11,6 +11,7 @@ pub mod power;
 pub mod time_driver;
 pub mod icu;
 pub mod pfsel;
+mod port_map;
 
 mod sealed {
     pub trait Sealed {}

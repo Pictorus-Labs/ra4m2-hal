@@ -241,6 +241,9 @@ impl SystemClock {
                 self.sysc.sckdivcr().modify(|w| {
                     w.ick().set(divider.into())
                 });
+                // Read back and barrier so the divider change has taken effect
+                let _ = self.sysc.sckdivcr().read();
+                cortex_m::asm::dsb();
                 self._disable_clock_write();
             }
         });
@@ -256,6 +259,9 @@ impl SystemClock {
                 self.sysc.sckscr().modify(|w| {
                     w.cksel().set(src.into())
                 });
+                // Read back and barrier so the clock switch has taken effect
+                let _ = self.sysc.sckscr().read();
+                cortex_m::asm::dsb();
                 self._disable_clock_write();
             }
         });
@@ -271,6 +277,8 @@ impl SystemClock {
                 self.sysc.sckdivcr().modify(|w| {
                     w.pckb().set(divider.into()).rsv().set(divider.into())
                 });
+                let _ = self.sysc.sckdivcr().read();
+                cortex_m::asm::dsb();
                 self._disable_clock_write();
             }
         });
@@ -286,6 +294,8 @@ impl SystemClock {
                 self.sysc.sckdivcr().modify(|w| {
                     w.pckd().set(divider.into())
                 });
+                let _ = self.sysc.sckdivcr().read();
+                cortex_m::asm::dsb();
                 self._disable_clock_write();
             }
         });

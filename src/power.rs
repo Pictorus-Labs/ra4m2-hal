@@ -21,6 +21,8 @@ pub fn enable_i2c0(cs: &cortex_m::interrupt::CriticalSection) {
     unsafe {
         if let Some(mstp) = POWER.borrow(cs).borrow_mut().as_mut() {
             mstp.mstpcrb().modify(|w| w.mstpb9().set(Mstpb9::_0)); // Set the bit to 0 to enable
+            let _ = mstp.mstpcrb().read();
+            cortex_m::asm::dsb();
         }
     }
 }
@@ -30,6 +32,8 @@ pub fn enable_i2c1(cs: &cortex_m::interrupt::CriticalSection) {
     unsafe {
         if let Some(mstp) = POWER.borrow(cs).borrow_mut().as_mut() {
             mstp.mstpcrb().modify(|w| w.mstpb8().set(Mstpb8::_0)); // Set the bit to 0 to enable
+            let _ = mstp.mstpcrb().read();
+            cortex_m::asm::dsb();
         }
     }
 }
@@ -40,6 +44,8 @@ pub fn enable_agt0(cs: &cortex_m::interrupt::CriticalSection) {
     unsafe {
         if let Some(mstp) = POWER.borrow(cs).borrow_mut().as_mut() {
             mstp.mstpcrd().modify(|w| w.mstpd3().set(Mstpd3::_0)); // Set the bit to 0 to enable
+            let _ = mstp.mstpcrd().read();
+            cortex_m::asm::dsb();
         }
     }
 }

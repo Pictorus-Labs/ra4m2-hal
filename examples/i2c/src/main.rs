@@ -52,14 +52,15 @@ fn main() -> ! {
     let new_clock_freq = system_clock.get_system_clk_freq();
     info!("New System Clock Frequency: {} Hz", new_clock_freq);
 
-    let p4 = ra4m2_hal::gpio::port4::Port4::new(p.PORT4);
+    
+    let p4 = ra4m2_hal::gpio::port4::Port4::new(p.PORT4).split();
 
-    let _p4_i2c_sda = p4.split().p00.into_alternate_function(ra4m2_hal::gpio::port4::PinFunction::IIC);
-    let _p4_i2c_scl = p4.split().p01.into_alternate_function(ra4m2_hal::gpio::port4::PinFunction::IIC);
+    let _p4_i2c_sda = p4.p00.into_alternate_function(ra4m2_hal::gpio::PinFunction::IIC);
+    let _p4_i2c_scl = p4.p01.into_alternate_function(ra4m2_hal::gpio::PinFunction::IIC);
 
-    let mut p4_15_blue_led = p4.split().p15.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
-    let mut p4_04_green_led = p4.split().p04.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
-    let mut p4_05_red_led = p4.split().p05.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
+    let mut p4_15_blue_led = p4.p15.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
+    let mut p4_04_green_led = p4.p04.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
+    let mut p4_05_red_led = p4.p05.into_output_push_pull(ra4m2_hal::gpio::DriveMode::Middle);
 
 
     info!("The time is now {:?}us", RenesasClock::default().try_now().unwrap().duration_since_epoch().integer());

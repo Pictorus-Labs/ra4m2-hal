@@ -27,8 +27,10 @@ pub fn register_interrupt<T: InterruptNumber>(interrupt: T, event: u16) {
         cortex_m::interrupt::free(|cs| {
             if let Some(icu) = ICU.borrow(cs).borrow_mut().as_mut() {
                 unsafe {
-                    cortex_m::peripheral::NVIC::unmask(interrupt);
                     icu.ielsr().get(interrupt.number() as usize).modify(|w| w.set(event as u32));
+                    let _ = icu.ielsr().get(interrupt.number() as usize).read();
+                    cortex_m::asm::dsb();
+                    cortex_m::peripheral::NVIC::unmask(interrupt);
                 }
             }
         });
@@ -47,6 +49,8 @@ pub fn clear_interrupt<T: InterruptNumber>(interrupt: T) {
                     let mut contents = icu.ielsr().get(interrupt.number() as usize).read().get();
                     contents &= CLEAR_INTERRUPT;
                     icu.ielsr().get(interrupt.number() as usize).modify(|w| w.set(contents));
+                    let _ = icu.ielsr().get(interrupt.number() as usize).read();
+                    cortex_m::asm::dsb();
                 }
             }
         });

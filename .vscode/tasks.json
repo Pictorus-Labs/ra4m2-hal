@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build example-gpio",
+            "type": "shell",
+            "command": "cargo",
+            "args": ["build", "--target", "thumbv8m.main-none-eabihf"],
+            "options": {
+                "cwd": "${workspaceFolder}/examples/gpio"
+            },
+            "problemMatcher": ["$rustc"],
+            "group": "build"
+        },
+        {
+            "label": "build example-i2c",
+            "type": "shell",
+            "command": "cargo",
+            "args": ["build", "--target", "thumbv8m.main-none-eabihf"],
+            "options": {
+                "cwd": "${workspaceFolder}/examples/i2c"
+            },
+            "problemMatcher": ["$rustc"],
+            "group": "build"
+        }
+    ]
+}

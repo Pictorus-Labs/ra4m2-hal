@@ -33,107 +33,139 @@ pub fn _enable_write_protect(cs: &cortex_m::interrupt::CriticalSection) {
     }
 }
 
-pub mod port4 {
-    use crate::{gpio::{port4::PinFunction, AnalogInput, DrainControl, DriveMode, InterruptEnable, InterruptEvent, OutputValue, PortDirection, PortMode, PullUpMode}, pfsel::{_disable_write_protect, _enable_write_protect, PFSEL}};
+// The per-port modules below are generated from the shared pin table in
+// `port_map.rs` — one entry per existing pin, carrying the PAC accessor that
+// serves it. See that file for the accessor/offset notes. All of the
+// generated PmnPFS register types have an identical field set, so the same
+// macro bodies type-check for every accessor.
 
-    // The SVD 2 Rust file does something that is pretty unexpected. the Port Function Select (PFS)
-    // registers provide the most control for configuring pins, and the data sheet describes them as
-    // grouped by Port M (port number, 0 - 7) and the N (pin number, 0 to Port Pin Number).
-    // 
-    // In SVD 2 Rust, these are grouped into a vector of p40pfs and p4pfs registers for Port 4. p40pfs
-    // has a dimension of 10 and p4pfs has a dimension of 6, representing the 16 pins of Port 4.
-    // Sanity check the address of the registers for the PFS against the Datasheet when implementing new
-    // ports to make sure the addresses are correct and match.
-    //
-    // No idea why it is split this way. 
-
-    const P40_DIMENSION: u8 = 10; // P40PFS has 10 elements
-    const _P4_DIMENSION: u8 = 6;   // P4PFS has
-
-    /// Clunky first pass implementation to set pin function for Port 4.
-    pub fn set_pin_function(pin: u8, 
-        direction: PortDirection,
-        pull_up_control: PullUpMode, 
-        open_drain: DrainControl, 
-        drive: DriveMode,
-        event: InterruptEvent,
-        interrupt_enable: InterruptEnable,
-        analog_select: AnalogInput,
-        function: PinFunction, 
-        port_mode: PortMode,
-    ) {
-        cortex_m::interrupt::free(|cs| {
-            _disable_write_protect(cs);
-
-            if let Some(pfs) = PFSEL.borrow(cs).borrow_mut().as_mut() {
-                unsafe {
-                    // Get the correct PFS register from SVD2Rust
-                    if pin < P40_DIMENSION {
-                        pfs.p40pfs().get(pin as usize).modify(|w| {
-                            w.psel().set(function as u8)
-                            .pdr().set((direction as u8).into())
-                            .pcr().set((pull_up_control as u8).into())
-                            .ncodr().set((open_drain as u8).into())
-                            .dscr().set((drive as u8).into())
-                            .eofr().set((event as u8).into())
-                            .isel().set((interrupt_enable as u8).into())
-                            .pmr().set((port_mode as u8).into())
-                            .asel().set((analog_select as u8).into())
-                            .psel().set(function as u8)
-                        });
-                    }else{
-                        pfs.p4pfs().get((pin - P40_DIMENSION) as usize).modify(|w| {
-                            w.psel().set(function as u8)
-                            .pdr().set((direction as u8).into())
-                            .pcr().set((pull_up_control as u8).into())
-                            .ncodr().set((open_drain as u8).into())
-                            .dscr().set((drive as u8).into())
-                            .eofr().set((event as u8).into())
-                            .isel().set((interrupt_enable as u8).into())
-                            .pmr().set((port_mode as u8).into())
-                            .asel().set((analog_select as u8).into())
-                            .psel().set(function as u8)
-                        });
-                    }
-                }
-            }
-
-            _enable_write_protect(cs);
-        });
-    }
-
-    pub fn set_pin_value(pin: u8, output: OutputValue) {
-        cortex_m::interrupt::free(|cs| {
-            _disable_write_protect(cs);
-
-            if let Some(pfs) = PFSEL.borrow(cs).borrow_mut().as_mut() {
-                unsafe {
-                    if pin < P40_DIMENSION {
-                        pfs.p40pfs().get(pin as usize).modify(|w| w.podr().set((output as u8).into()));
-                    } else {
-                        pfs.p4pfs().get((pin - P40_DIMENSION) as usize).modify(|w| w.podr().set((output as u8).into()));
-                    }
-                }
-            }
-
-            _enable_write_protect(cs);
-        });
-    }
-
-    pub fn get_pin_value(pin: u8) -> bool {
-        cortex_m::interrupt::free(|cs| {
-            if let Some(pfs) = PFSEL.borrow(cs).borrow_mut().as_mut() {
-                unsafe {
-                    if pin < P40_DIMENSION {
-                        pfs.p40pfs().get(pin as usize).read().pidr().get().0 == 1
-                    } else {
-                        pfs.p4pfs().get((pin - P40_DIMENSION) as usize).read().pidr().get().0 == 1
-                    }
-                }
-            } else {
-                false
-            }
-        })
-    }
+/// Resolves a pin-table accessor entry to its PmnPFS register reference.
+macro_rules! pfs_reg {
+    ($pfs:ident, arr $acc:ident $idx:literal) => {
+        $pfs.$acc().get($idx)
+    };
+    ($pfs:ident, reg $acc:ident) => {
+        $pfs.$acc()
+    };
 }
 
+/// Writes the full pin configuration to one PmnPFS register.
+macro_rules! pfs_write_config {
+    (
+        $reg:expr, $direction:ident, $pull_up_control:ident, $open_drain:ident, $drive:ident,
+        $event:ident, $interrupt_enable:ident, $analog_select:ident, $function:ident, $port_mode:ident
+    ) => {
+        $reg.modify(|w| {
+            w.psel().set($function as u8)
+                .pdr().set(($direction as u8).into())
+                .pcr().set(($pull_up_control as u8).into())
+                .ncodr().set(($open_drain as u8).into())
+                .dscr().set(($drive as u8).into())
+                .eofr().set(($event as u8).into())
+                .isel().set(($interrupt_enable as u8).into())
+                .pmr().set(($port_mode as u8).into())
+                .asel().set(($analog_select as u8).into())
+        })
+    };
+}
+
+/// Generates the PFS access module for one port. Invoked for every port via
+/// `for_each_port!` in `port_map.rs`; the port/pins struct names and PAC type
+/// in the table are consumed by the `gpio_port!` callback and ignored here.
+macro_rules! pfs_port {
+    (
+        $feature:literal, $mod_name:ident, $_port_struct:ident, $_pins_struct:ident, $_pac_ty:ty,
+        [ $( ($_field:ident, $n:literal, $($acc:tt)+) ),+ $(,)? ]
+    ) => {
+        #[cfg(feature = $feature)]
+        pub mod $mod_name {
+            use crate::gpio::{
+                AnalogInput, DrainControl, DriveMode, InterruptEnable, InterruptEvent, OutputValue,
+                PinFunction, PortDirection, PortMode, PullUpMode,
+            };
+            use crate::pfsel::{_disable_write_protect, _enable_write_protect, PFSEL};
+
+            pub fn set_pin_function(
+                pin: u8,
+                direction: PortDirection,
+                pull_up_control: PullUpMode,
+                open_drain: DrainControl,
+                drive: DriveMode,
+                event: InterruptEvent,
+                interrupt_enable: InterruptEnable,
+                analog_select: AnalogInput,
+                function: PinFunction,
+                port_mode: PortMode,
+            ) {
+                cortex_m::interrupt::free(|cs| {
+                    _disable_write_protect(cs);
+
+                    if let Some(pfs) = PFSEL.borrow(cs).borrow_mut().as_mut() {
+                        unsafe {
+                            match pin {
+                                $(
+                                    $n => pfs_write_config!(
+                                        pfs_reg!(pfs, $($acc)+),
+                                        direction, pull_up_control, open_drain, drive,
+                                        event, interrupt_enable, analog_select, function, port_mode
+                                    ),
+                                )+
+                                // Pins that don't exist on this port; unreachable through
+                                // the typed Pin API.
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    _enable_write_protect(cs);
+                });
+
+                // Flush the buffered configuration write so the pin (or the
+                // peripheral now muxed onto it) is actually configured before
+                // the caller touches it.
+                cortex_m::asm::dsb();
+            }
+
+            pub fn set_pin_value(pin: u8, output: OutputValue) {
+                cortex_m::interrupt::free(|cs| {
+                    _disable_write_protect(cs);
+
+                    if let Some(pfs) = PFSEL.borrow(cs).borrow_mut().as_mut() {
+                        unsafe {
+                            match pin {
+                                $(
+                                    $n => pfs_reg!(pfs, $($acc)+)
+                                        .modify(|w| w.podr().set((output as u8).into())),
+                                )+
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    _enable_write_protect(cs);
+                });
+            }
+
+            pub fn get_pin_value(pin: u8) -> bool {
+                cortex_m::interrupt::free(|cs| {
+                    if let Some(pfs) = PFSEL.borrow(cs).borrow_mut().as_mut() {
+                        unsafe {
+                            match pin {
+                                $(
+                                    $n => pfs_reg!(pfs, $($acc)+).read().pidr().get().0 == 1,
+                                )+
+                                _ => false,
+                            }
+                        }
+                    } else {
+                        false
+                    }
+                })
+            }
+        }
+    };
+}
+
+use crate::port_map::for_each_port;
+
+for_each_port!(pfs_port);
